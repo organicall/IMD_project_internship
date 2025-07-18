@@ -1,0 +1,10 @@
+{
+    "redirects": [
+      {
+        "source": "/",
+        "destination": "/entry_page.html",
+        "permanent": true
+      }
+    ]
+  }
+  
