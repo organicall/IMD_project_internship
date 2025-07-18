@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+
+</head>
+<body>
+   
+<header class="bg-blue-700 text-white px-6 py-4 shadow flex justify-between items-center">
+    <h1 class="text-xl font-bold">Weather Portal</h1>
+  
+    <nav class="space-x-6">
+      <a href="entry_page.html" class="cursor-pointer">Entry Page</a>
+      <a href="individual_tables.html" class="cursor-pointer">Individual tables</a>
+      <a href="export.html" class="cursor-pointer">Verification</a>
+      <a href="about.html" class="cursor-pointer">About</a>
+    </nav>
+  </header>
+  
+      
+
+    <div id="headerPortion" >
+
+    </div>
+
+    <div class="topBar">
+
+    <button id="calendarBtn">Pick a Date</button>
+  <!-- Container to show selected date -->
+  <!-- <div id="selectedDate"></div> -->
+
+  <!-- Calendar Popup -->
+    <div id="calendar" class="hidden">
+        <div id="selectedDateCalenderView"></div>
+        <div id="calendarHeader" style="padding-top: 40px;">
+            <button id="prevMonth">&lt;</button>
+            <span id="monthYear"></span>
+            <button id="nextMonth">&gt;</button>
+    </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Su</th><th>Mo</th><th>Tu</th><th>We</th><th>Th</th><th>Fr</th><th>Sa</th>
+                </tr>
+            </thead>
+            <tbody id="calendarBody"></tbody>
+        </table>
+    </div>
+
+    <!-- district selection -->
+        <div>
+            <label for="dropdownList"> Select District</label>
+            <select id="dropdownList">
+                <option value=""> Select a District</option>
+            </select></div>
+        </div>
+    <div id="selectedDate"></div>
+  
+    <!-- entry table -->
+    <div class = "entryPoint">
+        <h2>Entry Table</h2>
+        <h3 id="dsName" >
+
+        </h3>
+        <h3 id="dateDisplay">
+
+        </h3>
+        <table id="entryTable">
+        <thead>
+            <tr>
+                <th>Parameters</th>
+                <th>Day 1</th>
+                <th>Day 2</th>
+                <th>Day 3</th>
+                <th>Day 4</th>
+                <th>Day 5</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- add via the js -->
+        </tbody>
+    </table>
+    </div>
+
+    <!--submit button-->
+    <button id="submitButton">Submit Data</button>
+
+    <!--output table-->
+    <div id="outputTable">
+        <h2>Excel Sheet</h2>
+        <button onclick="exportToExcel()">Export to Excel</button>
+        <button onclick="exportToPDF()">Export to PDF</button>
+
+
+          
+    <table id="excelSheet">
+        <thead>
+            <tr>
+                <th colspan="11">5 DAYS VALUE ADDED FORECAST FOR ANDHRA PRADESH</th>
+            </tr>
+        </thead>
+        <thead>
+            <tr>
+                <th>Date: </th>
+                <td id="selectedDateCell"></td>
+                <th colspan="5">
+                    <label for="fractionInput">No:</label>
+                    <input type="text" id="fractionInput" placeholder="e.g. 3/4" class="fraction-input">
+                </th>
+                <th colspan="2">Forecast Validity:</th>
+                <th colspan="2">From:</th>
+            </tr>
+        </thead>
+        <thead>
+            <tr>
+                <th>District Name</th>
+                <th>Forecast Date</th>
+                <th>Rainfall (mm)</th>
+                <th>Temp Max (deg C)</th>
+                <th>Temp Min (deg C)</th>
+                <th>Humidity-Morning(%)</th>
+                <th>Humidity-Evening</th>
+                <th>Windspeed (kmph)</th>
+                <th>WindDirection (deg)</th>
+                <th>CloudCover (octa)</th>
+                <th style="color: red;">Warning(if any)</th>
+            </tr>
+        </thead>
+        <tbody>
+
+        </tbody>
+
+
+    </table>
+    </div>
+
+    <!-- This will be filled dynamically -->
+<div id="exportDatesList"></div>
+
+
+
+
+
+    
+
+    
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="script_entry.js"></script>
+  </body>
+</html>

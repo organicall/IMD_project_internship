@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Forecast & Observation Upload</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="bg-blue-700 text-white px-6 py-4 shadow flex justify-between items-center">
+    <h1 class="text-xl font-bold">Weather Portal</h1>
+  
+    <nav class="space-x-6">
+      <a href="entry_page.html" class="cursor-pointer">Entry Page</a>
+      <a href="individual_tables.html" class="cursor-pointer">Individual tables</a>
+      <a href="export.html" class="cursor-pointer">Verification</a>
+      <a href="about.html" class="cursor-pointer">About</a>
+    </nav>
+  </header>
+
+  <!-- Forecast Section -->
+  <section>
+    <h2> Forecast Data</h2>
+    <label for="filterDay">Select Day:</label>
+    <select id="filterDay">
+      <option value="">-- Day --</option>
+      <option value="Day 1">Day 1</option>
+      <option value="Day 2">Day 2</option>
+      <option value="Day 3">Day 3</option>
+      <option value="Day 4">Day 4</option>
+      <option value="Day 5">Day 5</option>
+    </select>
+
+    <label for="filterDistrict">Select District:</label>
+    <select id="filterDistrict">
+      <option value="">-- District --</option>
+    </select>
+
+    <button id="filterButton">Show Forecast</button>
+
+    <div id="filteredResult" style="margin-top: 20px;"></div>
+    
+   <!-- 🔼 Forecast Excel Upload Section -->
+<h3>Upload Forecast Data (Excel)</h3>
+<input type="file" id="forecastExcelInput" accept=".xlsx" />
+<br><br>
+<button id="uploadForecastToDB" >Upload Forecast Data</button>
+<p id="forecastUploadStatus"></p>
+<h3>Forecast Uploads</h3>
+<ul id="forecastUploadList"></ul>
+
+
+    
+
+    
+    
+<h3>Upload Observation Excel Sheet</h3>
+<input type="file" id="observationUploadInput" accept=".xlsx" />
+<button id="uploadObservationButton">Upload Observation Data</button>
+<!--list -->
+<h3>Observation Uploads</h3>
+<ul id="observationUploadList"></ul>
+
+  
+
+  
+
+  <!-- Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+  <script src="script_individual.js"></script>
+</body>
+</html>
