@@ -5,6 +5,14 @@
         "destination": "/entry_page.html",
         "permanent": true
       }
+    ],
+
+    "rewrites": [
+      {
+        "source": "/verification",
+        "destination": "/verification.html"
+      }
     ]
+    
   }
   

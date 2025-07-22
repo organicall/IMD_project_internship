@@ -20,35 +20,7 @@ const districts = [
   "Visakhapatnam", "Vizianagaram", "West Godavari", "YSR Kadapa"
 ];
 
-//  Dropdown Setup
-const dropdown = document.getElementById("dropdownList");
-districts.forEach(d => {
-  const option = document.createElement("option");
-  option.value = d;
-  option.textContent = d;
-  dropdown.appendChild(option);
-});
-const dsName = document.getElementById("dsName");
-dropdown.addEventListener("change", () => {
-  dsName.textContent = `Selected District: ${dropdown.value}`;
-});
 
-//  Entry Table Setup
-const tableBody = document.querySelector("#entryTable tbody");
-parameters.forEach(param => {
-  const row = document.createElement("tr");
-  const paramCell = document.createElement("td");
-  paramCell.textContent = param;
-  row.appendChild(paramCell);
-  for (let i = 0; i < 5; i++) {
-    const cell = document.createElement("td");
-    const input = document.createElement("input");
-    input.type = "number";
-    cell.appendChild(input);
-    row.appendChild(cell);
-  }
-  tableBody.appendChild(row);
-});
 
 // ✅ Calendar Logic
 const calendarBtn = document.getElementById("calendarBtn");
@@ -114,6 +86,36 @@ function formatDateISO(dateString) {
   const date = new Date(dateString);
   return date.toISOString().split("T")[0];
 }
+
+//  Dropdown Setup
+const dropdown = document.getElementById("dropdownList");
+districts.forEach(d => {
+  const option = document.createElement("option");
+  option.value = d;
+  option.textContent = d;
+  dropdown.appendChild(option);
+});
+const dsName = document.getElementById("dsName");
+dropdown.addEventListener("change", () => {
+  dsName.textContent = `Selected District: ${dropdown.value}`;
+});
+
+//  Entry Table Setup
+const tableBody = document.querySelector("#entryTable tbody");
+parameters.forEach(param => {
+  const row = document.createElement("tr");
+  const paramCell = document.createElement("td");
+  paramCell.textContent = param;
+  row.appendChild(paramCell);
+  for (let i = 0; i < 5; i++) {
+    const cell = document.createElement("td");
+    const input = document.createElement("input");
+    input.type = "number";
+    cell.appendChild(input);
+    row.appendChild(cell);
+  }
+  tableBody.appendChild(row);
+});
 
 // ✅ Entry Submission
 document.getElementById("submitButton").addEventListener("click", async () => {

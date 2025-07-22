@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Forecast vs Observation Comparison</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <style>
+    body {
+      font-family: Arial;
+      margin: 20px;
+    }
+    select, table {
+      margin-top: 15px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background-color: #f3f3f3;
+    }
+  </style>
+</head>
+<body>
+
+    <header class="bg-blue-700 text-white px-6 py-4 shadow flex justify-between items-center">
+        <h1 class="text-xl font-bold">Weather Portal</h1>
+      
+        <nav class="space-x-6">
+          <a href="entry_page.html" class="cursor-pointer">Entry Page</a>
+          <a href="individual_tables.html" class="cursor-pointer">Individual tables</a>
+          <a href="verification.html" class="cursor-pointer">Verification</a>
+          <a href="about.html" class="cursor-pointer">About</a>
+        </nav>
+      </header>
+
+  <h1>📊 Forecast vs Observation - Tmax</h1>
+
+  <label for="districtDropdown">Select District:</label>
+  <select id="districtDropdown">
+    <option value="">-- Select a district --</option>
+  </select>
+
+  <button id="compareBtn">Compare</button>
+
+  <table id="comparisonTable">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Tmax (fc)</th>
+        <th>Tmax (obs)</th>
+        <th>obs_corr</th>
+        <th>fc_corr</th>
+        <th>|obs - fc|</th>
+        <th>(|obs - fc|)²</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tbody id="comparisonBody"></tbody>
+    </tbody>
+  </table>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="script_verification.js"></script>
+</body>
+</html>
