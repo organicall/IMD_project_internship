@@ -182,7 +182,7 @@ async function uploadForecastData() {
   }
 
   const { error } = await client
-    .from("forecast_data_flat")
+    .from("forecast_excel_uploads")
     .insert(forecastPayload);
 
   if (error) {
