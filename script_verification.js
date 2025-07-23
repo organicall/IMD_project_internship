@@ -11,6 +11,12 @@ const districts = [
   "Visakhapatnam", "Vizianagaram", "West Godavari", "YSR Kadapa"
 ];
 
+const parameters = [
+  "Rainfall (mm)", "Temp Max (deg C)", "Temp Min (deg C)",
+  "Humidity-Morning(%)", "Humidity-Evening",
+  "Windspeed (kmph)", "WindDirection (deg)", "CloudCover (octa)"
+];
+
 // ✅ Populate Dropdown
 const dropdown = document.getElementById("districtDropdown");
 districts.forEach(d => {
