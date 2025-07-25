@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -71,6 +71,77 @@
       <tbody id="comparisonBody"></tbody>
     </tbody>
   </table>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="script_verification.js"></script>
+</body>
+</html> -->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Forecast vs Observation Comparison</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <h1>Weather Portal</h1>
+    <nav>
+      <a href="entry_page.html">Entry Page</a>
+      <a href="individual_tables.html">Individual tables</a>
+      <a href="verification.html">Verification</a>
+      <a href="about.html">About</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <h1>📊 Forecast vs Observation Comparison</h1>
+
+    <div class="form-group">
+      <label for="districtDropdown">Select District:</label>
+      <select id="districtDropdown">
+        <option value="">-- Select a district --</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="parameterDropdown">Select Parameter:</label>
+      <select id="parameterDropdown">
+        <option value="">-- Select parameter --</option>
+      </select>
+    </div>
+
+    <button id="compareBtn">Compare Data</button>
+
+    <div id="loadingMessage" style="display: none;" class="loading">
+      Loading data, please wait...
+    </div>
+
+    <div id="errorMessage" style="display: none;" class="error">
+    </div>
+
+    <table id="comparisonTable" style="display: none;">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Forecast Value</th>
+          <th>Observed Value</th>
+          <th>Obs Corrected</th>
+          <th>FC Corrected</th>
+          <th>|obs - fc|</th>
+          <th>(|obs - fc|)²</th>
+        </tr>
+      </thead>
+      <tbody id="comparisonBody">
+        <!-- Data will be populated here -->
+      </tbody>
+    </table>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script src="script_verification.js"></script>
 </body>

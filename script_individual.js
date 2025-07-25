@@ -106,102 +106,10 @@ document.getElementById("filterButton").addEventListener("click", async () => {
   resultDiv.appendChild(table);
 });
 
-// ✅ Format MM/DD/YYYY to YYYY-MM-DD
-// function formatDateFromMMDDYYYY(dateStr) {
-//   const [month, day, year] = dateStr.split(/[\/\-]/);
-//   if (!month || !day || !year) return null;
-//   return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-// }
+function normalizeDate(date) {
+  return new Date(date).toISOString().split('T')[0]; // returns 'YYYY-MM-DD'
+}
 
-// ✅ Fixed Date Formatting Function
-// function formatDateFromMMDDYYYY(dateStr) {
-//   if (!dateStr) return null;
-
-//   console.log("📅 Raw date from Excel:", dateStr, typeof dateStr);
-
-//   // Handle Excel numeric date (serial date like 45138)
-//   if (typeof dateStr === 'number') {
-//     // Excel serial date: days since January 1, 1900 (with leap year bug)
-//     const excelEpoch = new Date(1900, 0, 1); // January 1, 1900
-//     const date = new Date(excelEpoch.getTime() + (dateStr - 2) * 86400000); // -2 accounts for Excel's leap year bug
-    
-//     const yyyy = date.getFullYear();
-//     const mm = String(date.getMonth() + 1).padStart(2, '0');
-//     const dd = String(date.getDate()).padStart(2, '0');
-    
-//     console.log(`📅 Converted Excel serial ${dateStr} to ${yyyy}-${mm}-${dd}`);
-//     return `${yyyy}-${mm}-${dd}`;
-//   }
-
-//   // If it's a Date object
-//   if (dateStr instanceof Date) {
-//     const yyyy = dateStr.getFullYear();
-//     const mm = String(dateStr.getMonth() + 1).padStart(2, '0');
-//     const dd = String(dateStr.getDate()).padStart(2, '0');
-    
-//     console.log(`📅 Converted Date object to ${yyyy}-${mm}-${dd}`);
-//     return `${yyyy}-${mm}-${dd}`;
-//   }
-
-//   // If it's a string, clean it up first
-//   if (typeof dateStr === 'string') {
-//     const cleanStr = dateStr.trim().replace(/['"]+/g, '');
-    
-//     // Try to parse as ISO date first (YYYY-MM-DD)
-//     if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(cleanStr)) {
-//       const testDate = new Date(cleanStr);
-//       if (!isNaN(testDate.getTime())) {
-//         console.log(`📅 Already in ISO format: ${cleanStr}`);
-//         return cleanStr;
-//       }
-//     }
-    
-//     // Try MM/DD/YYYY or MM-DD-YYYY format
-//     const parts = cleanStr.split(/[-/]/);
-//     if (parts.length === 3) {
-//       let [part1, part2, part3] = parts;
-      
-//       // Determine if it's MM/DD/YYYY or DD/MM/YYYY based on values
-//       let month, day, year;
-      
-//       if (part3.length === 4) {
-//         // Third part is year
-//         year = part3;
-        
-//         // Check if first part is likely month (> 12 means it's probably day)
-//         if (parseInt(part1) > 12) {
-//           day = part1;
-//           month = part2;
-//         } else if (parseInt(part2) > 12) {
-//           month = part1;
-//           day = part2;
-//         } else {
-//           // Assume MM/DD/YYYY (US format)
-//           month = part1;
-//           day = part2;
-//         }
-//       } else {
-//         console.warn(`❌ Unexpected date format: ${cleanStr}`);
-//         return null;
-//       }
-      
-//       const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-      
-//       // Validate the date
-//       const testDate = new Date(formattedDate);
-//       if (isNaN(testDate.getTime())) {
-//         console.warn(`❌ Invalid date created: ${formattedDate} from ${cleanStr}`);
-//         return null;
-//       }
-      
-//       console.log(`📅 Converted ${cleanStr} to ${formattedDate}`);
-//       return formattedDate;
-//     }
-//   }
-  
-//   console.warn(`❌ Could not parse date: ${dateStr} (type: ${typeof dateStr})`);
-//   return null;
-// }
 
 
 // ✅ Handle Forecast Excel Upload
@@ -210,9 +118,6 @@ let forecastPayload = [];
 
 document.getElementById("forecastExcelInput").addEventListener("change", handleForecastExcelFile);
 document.getElementById("uploadForecastToDB").addEventListener("click", uploadForecastData);
-
-
-
 
 
 // ✅ Improved Excel File Reading
@@ -309,120 +214,11 @@ async function uploadForecastData() {
 
 
 
-
-
-
-//observsation data upload 
-// ✅ Improved Observation Data Upload
-// document.getElementById("uploadObservationButton").addEventListener("click", async () => {
-//   const fileInput = document.getElementById("observationUploadInput");
-//   const file = fileInput.files[0];
-
-//   if (!file) {
-//     alert("Please select an Excel file.");
-//     return;
-//   }
-
-//   const reader = new FileReader();
-//   reader.onload = async (e) => {
-//     const data = new Uint8Array(e.target.result);
-    
-//     // ✅ Better Excel reading options for observation data
-//     const workbook = XLSX.read(data, { 
-//       type: "array",
-//       cellDates: true,  // ← This helps Excel parse dates as Date objects
-//       dateNF: 'mm/dd/yyyy' // ← Expected date format
-//     });
-    
-//     const sheetName = workbook.SheetNames[0];
-//     const worksheet = workbook.Sheets[sheetName];
-    
-//     // ✅ Convert sheet to JSON with better options
-//     const json = XLSX.utils.sheet_to_json(worksheet, {
-//       defval: null, // Default value for empty cells
-//       raw: false    // Don't use raw values, let XLSX handle formatting
-//     });
-
-//     if (json.length === 0) {
-//       alert("Sheet is empty.");
-//       return;
-//     }
-
-//     const entries = [];
-
-//     for (let i = 0; i < json.length; i++) {
-//       const row = json[i];
-//       const {
-//         "forecast_date": forecastDateRaw,
-//         "district_name": district,
-//         "rainfall": rainfall,
-//         "temp_max_c": tempMax,
-//         "temp_min_c": tempMin,
-//         "humidity_1": humidity1,
-//         "humidity_2": humidity2,
-//         "wind_speed_kmph": windSpeed,
-//         "wind_direction_deg": windDir,
-//         "cloud_cover_octa": cloud
-//       } = row;
-
-//       console.log(`Processing observation row ${i + 1}:`, { 
-//         district, 
-//         forecastDateRaw, 
-//         type: typeof forecastDateRaw 
-//       });
-
-//       if (!district || (forecastDateRaw === null || forecastDateRaw === undefined || forecastDateRaw === "")) {
-//         console.warn(`❌ Observation row ${i + 2} skipped: missing district_name or forecast_date`, row);
-//         continue;
-//       }
-
-//       const forecast_date = formatDateFromMMDDYYYY(forecastDateRaw);
-//       if (!forecast_date) {
-//         console.warn(`❌ Observation row ${i + 2} skipped: invalid date format - "${forecastDateRaw}" (type: ${typeof forecastDateRaw})`, row);
-//         continue;
-//       }
-
-//       entries.push({
-//         forecast_date,
-//         district_name: district,
-//         rainfall: parseNullableFloat(rainfall),
-//         temp_max_c: parseNullableFloat(tempMax),
-//         temp_min_c: parseNullableFloat(tempMin),
-//         humidity_1: parseNullableFloat(humidity1),
-//         humidity_2: parseNullableFloat(humidity2),
-//         wind_speed_kmph: parseNullableFloat(windSpeed),
-//         wind_direction_deg: parseNullableFloat(windDir),
-//         cloud_cover_octa: parseNullableFloat(cloud),
-//       });
-//     }
-
-//     console.log("📦 Uploading", entries.length, "observation rows to observation_data_flat");
-
-//     if (entries.length === 0) {
-//       alert("⚠️ No valid observation data rows found to upload.");
-//       return;
-//     }
-
-//     const { error } = await client
-//       .from("observation_data_flat")
-//       .insert(entries);
-
-//     if (error) {
-//       console.error("❌ Observation upload failed:", error.message);
-//       alert("Upload failed: " + error.message);
-//     } else {
-//       alert("✅ Observation data uploaded successfully.");
-//       // Clear the file input and refresh the upload list
-//       fileInput.value = "";
-//       listObservationUploads();
-//     }
-//   };
-
-//   reader.readAsArrayBuffer(file);
-// });
-
 // ✅ SINGLE, UNIFIED DATE FORMATTING FUNCTION
 // Replace ALL existing formatDateFromMMDDYYYY functions with this one
+
+
+// DEBUG VERSION - Add this temporarily to see what's happening
 function formatDateFromMMDDYYYY(dateStr) {
   if (!dateStr && dateStr !== 0) return null;
 
@@ -430,22 +226,36 @@ function formatDateFromMMDDYYYY(dateStr) {
 
   // Handle Excel numeric date (serial date like 45138)
   if (typeof dateStr === 'number') {
-    // Excel serial date: days since January 1, 1900
-    // Excel incorrectly considers 1900 a leap year, so we need to account for that
-    let date;
-    if (dateStr > 59) {
-      // After Feb 28, 1900, subtract 1 day to account for Excel's leap year bug
-      date = new Date(1900, 0, dateStr - 1);
-    } else {
-      date = new Date(1900, 0, dateStr);
-    }
+    console.log("🔍 DEBUGGING Excel serial date:", dateStr);
     
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const dd = String(date.getDate()).padStart(2, '0');
+    // Let's try multiple approaches and see which one works
     
+    // Method 1: Standard Excel epoch (Dec 30, 1899)
+    const method1Date = new Date(1899, 11, 30);
+    method1Date.setDate(method1Date.getDate() + dateStr);
+    console.log("Method 1 result:", method1Date.toISOString().split('T')[0]);
+    
+    // Method 2: Excel epoch with +1 day correction
+    const method2Date = new Date(1899, 11, 30);
+    method2Date.setDate(method2Date.getDate() + dateStr + 1);
+    console.log("Method 2 result:", method2Date.toISOString().split('T')[0]);
+    
+    // Method 3: Using Unix timestamp calculation
+    const method3Date = new Date((dateStr - 25569) * 86400 * 1000);
+    console.log("Method 3 result:", method3Date.toISOString().split('T')[0]);
+    
+    // Method 4: Simple date calculation
+    const baseDate = new Date('1900-01-01');
+    const method4Date = new Date(baseDate.getTime() + (dateStr - 1) * 24 * 60 * 60 * 1000);
+    console.log("Method 4 result:", method4Date.toISOString().split('T')[0]);
+    
+    // For now, let's use Method 2 (seems most likely to work)
+    const yyyy = method2Date.getFullYear();
+    const mm = String(method2Date.getMonth() + 1).padStart(2, '0');
+    const dd = String(method2Date.getDate()).padStart(2, '0');
     const result = `${yyyy}-${mm}-${dd}`;
-    console.log(`📅 Converted Excel serial ${dateStr} to ${result}`);
+    
+    console.log(`📅 FINAL RESULT: Excel serial ${dateStr} converted to ${result}`);
     return result;
   }
 
@@ -528,6 +338,73 @@ function formatDateFromMMDDYYYY(dateStr) {
   return null;
 }
 
+
+function formatDateObservation(dateStr) {
+  if (!dateStr && dateStr !== 0) return null;
+
+  let parsedDate = null;
+
+  // If it's a number (Excel serial)
+  if (typeof dateStr === 'number') {
+    const baseDate = new Date(1899, 11, 30);
+    baseDate.setDate(baseDate.getDate() + dateStr);
+    parsedDate = baseDate;
+  }
+
+  // If it's a Date object
+  else if (dateStr instanceof Date && !isNaN(dateStr.getTime())) {
+    parsedDate = new Date(dateStr);
+  }
+
+  // If it's a string
+  else if (typeof dateStr === 'string') {
+    const cleanStr = dateStr.trim().replace(/['"]+/g, '');
+
+    // Already ISO?
+    if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(cleanStr)) {
+      parsedDate = new Date(cleanStr);
+    } else {
+      const parts = cleanStr.split(/[-/]/);
+      if (parts.length === 3) {
+        let [part1, part2, part3] = parts.map(p => p.trim());
+
+        let year, month, day;
+        if (part3.length === 4) {
+          year = part3;
+          month = part1;
+          day = part2;
+        } else if (part1.length === 4) {
+          year = part1;
+          month = part2;
+          day = part3;
+        }
+
+        const tryDate = new Date(`${year}-${month}-${day}`);
+        if (!isNaN(tryDate.getTime())) {
+          parsedDate = tryDate;
+        }
+      }
+    }
+  }
+
+  if (!parsedDate || isNaN(parsedDate.getTime())) {
+    console.warn(`❌ Could not parse date:`, dateStr);
+    return null;
+  }
+
+  // ✅ Add 1 day to fix observation date shift
+  parsedDate.setDate(parsedDate.getDate() + 1);
+
+  // Format to yyyy-mm-dd
+  const yyyy = parsedDate.getFullYear();
+  const mm = String(parsedDate.getMonth() + 1).padStart(2, '0');
+  const dd = String(parsedDate.getDate()).padStart(2, '0');
+
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+
+
 // ✅ UPDATED OBSERVATION UPLOAD FUNCTION
 document.getElementById("uploadObservationButton").addEventListener("click", async () => {
   const fileInput = document.getElementById("observationUploadInput");
@@ -573,6 +450,8 @@ document.getElementById("uploadObservationButton").addEventListener("click", asy
         blankrows: false
       });
 
+      
+
       console.log("📋 First structured row:", json[0]);
       console.log("📋 Total rows found:", json.length);
 
@@ -609,7 +488,7 @@ document.getElementById("uploadObservationButton").addEventListener("click", asy
           continue;
         }
 
-        const forecast_date = formatDateFromMMDDYYYY(forecastDateRaw);
+        const forecast_date = formatDateObservation(forecastDateRaw);
         if (!forecast_date) {
           console.warn(`⚠️ Row ${i + 1} skipped: could not parse date "${forecastDateRaw}"`);
           skippedCount++;
@@ -684,6 +563,7 @@ document.addEventListener("DOMContentLoaded", () => {
   listObservationUploads();
   listForecastUploads();
 });
+
 
 // ✅ Observation Upload Listing
 async function listObservationUploads() {
@@ -788,3 +668,6 @@ async function deleteForecastByDate(date) {
     listForecastUploads();
   }
 }
+
+
+
