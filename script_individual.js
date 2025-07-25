@@ -125,6 +125,8 @@ async function handleForecastExcelFile(event) {
   const file = event.target.files[0];
   if (!file) return alert("❌ No file selected");
 
+  //window.forecastSheetName = file.name.split('.')[0]; // e.g., "forecast_july25"
+
   const reader = new FileReader();
   reader.onload = (e) => {
     const byteData = new Uint8Array(e.target.result);
@@ -195,9 +197,20 @@ async function uploadForecastData() {
     return;
   }
 
+  const sheetNameInput = document.getElementById("forecastSheetNameInput").value.trim();
+  if (!sheetNameInput) {
+    alert("⚠️ Please enter a sheet name.");
+    return;
+  }
+
+  const finalPayload = forecastPayload.map(row => ({
+    ...row,
+    sheet_name: sheetNameInput
+  }));
+
   const { error } = await client
     .from("forecast_excel_uploads")
-    .insert(forecastPayload);
+    .insert(finalPayload);
 
   if (error) {
     console.error("❌ Upload failed:", error);
@@ -211,14 +224,77 @@ async function uploadForecastData() {
   }
 }
 
+async function loadForecastUploadList() {
+  const listEl = document.getElementById("forecastUploadList");
+  listEl.innerHTML = "<li>Loading...</li>";
+
+  const { data, error } = await client
+    .from("forecast_excel_uploads")
+    .select("sheet_name", {distinct: true})
+    .neq("sheet_name", null)
+    .limit(1000);
+    
+  
+
+  if (error) {
+    listEl.innerHTML = `<li style="color:red;">Error: ${error.message}</li>`;
+    return;
+  }
+
+  console.log("Fetched rows from Supabase:", data.map(d => d.sheet_name));
+
+
+  const uniqueSheets = [...new Set(data.map(row => row.sheet_name))];
+  listEl.innerHTML = '';
+
+  if (uniqueSheets.length === 0) {
+    listEl.innerHTML = "<li>No uploads yet.</li>";
+    return;
+  }
+
+  uniqueSheets.forEach(sheet => {
+    const li = document.createElement("li");
+    li.textContent = sheet;
+  
+    const btn = document.createElement("button");
+    btn.textContent = "Delete";
+    btn.style.marginLeft = "10px";
+    btn.onclick = () => deleteForecastSheet(sheet);
+  
+    li.appendChild(btn);
+    listEl.appendChild(li);
+    console.log("Creating <li> for:", sheet);
+
+  });
+  
+}
+
+async function deleteForecastSheet(sheetName) {
+  const confirmDelete = confirm(`Are you sure you want to delete all data for "${sheetName}"?`);
+  if (!confirmDelete) return;
+
+  const { error } = await client
+    .from("forecast_excel_uploads")
+    .delete()
+    .eq("sheet_name", sheetName);
+
+  if (error) {
+    alert("❌ Error deleting sheet: " + error.message);
+  } else {
+    alert(`✅ Deleted all forecast data for "${sheetName}"`);
+
+    // ✅ Refresh the list to remove it from view
+    await loadForecastUploadList();
+  }
+}
 
 
 
-// ✅ SINGLE, UNIFIED DATE FORMATTING FUNCTION
-// Replace ALL existing formatDateFromMMDDYYYY functions with this one
 
 
-// DEBUG VERSION - Add this temporarily to see what's happening
+//DATE FORMATTING 
+
+//FOR FORECAST
 function formatDateFromMMDDYYYY(dateStr) {
   if (!dateStr && dateStr !== 0) return null;
 
@@ -338,7 +414,7 @@ function formatDateFromMMDDYYYY(dateStr) {
   return null;
 }
 
-
+//FOR OBSERVATION
 function formatDateObservation(dateStr) {
   if (!dateStr && dateStr !== 0) return null;
 
@@ -560,114 +636,13 @@ function parseNullableFloat(val) {
 
 // 🔄 Load on DOM Ready
 document.addEventListener("DOMContentLoaded", () => {
-  listObservationUploads();
-  listForecastUploads();
+  loadForecastUploadList();
 });
 
 
-// ✅ Observation Upload Listing
-async function listObservationUploads() {
-  const { data, error } = await client
-    .from("observation_data_flat")
-    .select("forecast_date")
-    .order("forecast_date", { ascending: false });
 
-  if (error) {
-    console.error("❌ Failed to fetch observation upload dates", error);
-    return;
-  }
 
-  const dates = [...new Set(data.map(d => d.forecast_date))];
-  const section = document.getElementById("observationUploadList");
-  section.innerHTML = "<h4>📄 Observation Uploads</h4>";
 
-  dates.forEach(date => {
-    const container = document.createElement("div");
-    container.style.marginBottom = "10px";
-
-    const label = document.createElement("span");
-    label.textContent = `📅 ${date}`;
-
-    const deleteBtn = document.createElement("button");
-    deleteBtn.textContent = "🗑️ Delete";
-    deleteBtn.style.marginLeft = "10px";
-    deleteBtn.style.backgroundColor = "#ff4d4d";
-    deleteBtn.style.color = "white";
-    deleteBtn.onclick = () => deleteObservationByDate(date);
-
-    container.appendChild(label);
-    container.appendChild(deleteBtn);
-    section.appendChild(container);
-  });
-}
-
-async function deleteObservationByDate(date) {
-  if (!confirm(`Delete all observation entries for ${date}?`)) return;
-
-  const { error } = await supabase
-    .from("observation_data_flat")
-    .delete()
-    .eq("forecast_date", date);
-
-  if (error) {
-    alert("❌ Delete failed: " + error.message);
-  } else {
-    alert(`✅ Deleted observation entries for ${date}`);
-    listObservationUploads();
-  }
-}
-
-// ✅ Forecast Upload Listing
-async function listForecastUploads() {
-  const { data, error } = await client
-    .from("forecast_excel_uploads")
-    .select("forecast_date")
-    .order("forecast_date", { ascending: false });
-
-  if (error) {
-    console.error("❌ Failed to fetch forecast upload dates", error);
-    return;
-  }
-
-  const dates = [...new Set(data.map(d => d.forecast_date))];
-  const section = document.getElementById("forecastUploadList");
-  section.innerHTML = "<h4>📄 Forecast Uploads</h4>";
-
-  dates.forEach(date => {
-    const container = document.createElement("div");
-    container.style.marginBottom = "10px";
-
-    const label = document.createElement("span");
-    label.textContent = `📅 ${date}`;
-
-    const deleteBtn = document.createElement("button");
-    deleteBtn.textContent = "🗑️ Delete";
-    deleteBtn.style.marginLeft = "10px";
-    deleteBtn.style.backgroundColor = "#ff4d4d";
-    deleteBtn.style.color = "white";
-    deleteBtn.onclick = () => deleteForecastByDate(date);
-
-    container.appendChild(label);
-    container.appendChild(deleteBtn);
-    section.appendChild(container);
-  });
-}
-
-async function deleteForecastByDate(date) {
-  if (!confirm(`Delete all forecast entries for ${date}?`)) return;
-
-  const { error } = await client
-    .from("forecast_excel_uploads")
-    .delete()
-    .eq("forecast_date", date);
-
-  if (error) {
-    alert("❌ Delete failed: " + error.message);
-  } else {
-    alert(`✅ Deleted forecast entries for ${date}`);
-    listForecastUploads();
-  }
-}
 
 
 
