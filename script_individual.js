@@ -1,3 +1,5 @@
+
+
 // ✅ Supabase Setup
 const SUPABASE_URL = 'https://ndbsshedsranhvdsspyb.supabase.co'; // ⬅️ REPLACE
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kYnNzaGVkc3Jhbmh2ZHNzcHliIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0OTM2NTgsImV4cCI6MjA2ODA2OTY1OH0.2aGvJfaPVqiwXR_hPWbgSXl_BphvkEtAsg1rkOM-eVY';                    // ⬅️ REPLACE
@@ -18,6 +20,9 @@ const districts = [
   "Visakhapatnam", "Vizianagaram", "West Godavari", "YSR Kadapa"
 ];
 
+// ✅ Global variable to store existing sheet names for validation
+let existingSheetNames = [];
+
 // ✅ Populate District Dropdown
 document.addEventListener("DOMContentLoaded", () => {
   const districtSelect = document.getElementById("filterDistrict");
@@ -27,6 +32,10 @@ document.addEventListener("DOMContentLoaded", () => {
     option.textContent = d;
     districtSelect.appendChild(option);
   });
+
+  // Load forecast upload list on page load
+  loadForecastUploadList();
+  listObservationUploads();
 });
 
 // ✅ Handle Filter Button
@@ -110,22 +119,50 @@ function normalizeDate(date) {
   return new Date(date).toISOString().split('T')[0]; // returns 'YYYY-MM-DD'
 }
 
+// ✅ Sheet Name Validation
+function validateSheetName(sheetName) {
+  const validationDiv = document.getElementById("sheetNameValidation");
+  
+  if (!sheetName.trim()) {
+    validationDiv.textContent = "Sheet name cannot be empty.";
+    validationDiv.style.display = "block";
+    return false;
+  }
 
+  if (existingSheetNames.includes(sheetName.trim())) {
+    validationDiv.textContent = `Sheet name "${sheetName}" already exists. Please choose a different name.`;
+    validationDiv.style.display = "block";
+    return false;
+  }
+
+  validationDiv.style.display = "none";
+  return true;
+}
+
+// ✅ Add real-time validation to sheet name input
+document.getElementById("forecastSheetNameInput").addEventListener("input", (e) => {
+  const sheetName = e.target.value;
+  const isValid = validateSheetName(sheetName);
+  
+  // Enable/disable upload button based on validation
+  const uploadButton = document.getElementById("uploadForecastToDB");
+  if (isValid && forecastPayload.length > 0) {
+    uploadButton.disabled = false;
+  } else {
+    uploadButton.disabled = true;
+  }
+});
 
 // ✅ Handle Forecast Excel Upload
-// ✅ Forecast Excel Upload Support
 let forecastPayload = [];
 
 document.getElementById("forecastExcelInput").addEventListener("change", handleForecastExcelFile);
 document.getElementById("uploadForecastToDB").addEventListener("click", uploadForecastData);
 
-
 // ✅ Improved Excel File Reading
 async function handleForecastExcelFile(event) {
   const file = event.target.files[0];
   if (!file) return alert("❌ No file selected");
-
-  //window.forecastSheetName = file.name.split('.')[0]; // e.g., "forecast_july25"
 
   const reader = new FileReader();
   reader.onload = (e) => {
@@ -181,7 +218,12 @@ async function handleForecastExcelFile(event) {
     }
 
     forecastPayload = parsed;
-    document.getElementById("uploadForecastToDB").disabled = parsed.length === 0;
+    
+    // Check if sheet name is valid before enabling upload
+    const sheetName = document.getElementById("forecastSheetNameInput").value;
+    const isSheetNameValid = validateSheetName(sheetName);
+    
+    document.getElementById("uploadForecastToDB").disabled = parsed.length === 0 || !isSheetNameValid;
     document.getElementById("forecastUploadStatus").textContent =
       parsed.length > 0
         ? `✅ Ready to upload ${parsed.length} rows.`
@@ -198,9 +240,9 @@ async function uploadForecastData() {
   }
 
   const sheetNameInput = document.getElementById("forecastSheetNameInput").value.trim();
-  if (!sheetNameInput) {
-    alert("⚠️ Please enter a sheet name.");
-    return;
+  
+  if (!validateSheetName(sheetNameInput)) {
+    return; // Validation message already shown
   }
 
   const finalPayload = forecastPayload.map(row => ({
@@ -219,8 +261,13 @@ async function uploadForecastData() {
     alert("✅ Forecast data uploaded successfully.");
     forecastPayload = [];
     document.getElementById("forecastExcelInput").value = "";
+    document.getElementById("forecastSheetNameInput").value = "";
     document.getElementById("uploadForecastToDB").disabled = true;
     document.getElementById("forecastUploadStatus").textContent = "";
+    document.getElementById("sheetNameValidation").style.display = "none";
+    
+    // Refresh the list to show the newly uploaded sheet
+    await loadForecastUploadList();
   }
 }
 
@@ -228,69 +275,277 @@ async function loadForecastUploadList() {
   const listEl = document.getElementById("forecastUploadList");
   listEl.innerHTML = "<li>Loading...</li>";
 
-  const { data, error } = await client
-    .from("forecast_excel_uploads")
-    .select("sheet_name", {distinct: true})
-    .neq("sheet_name", null)
-    .limit(1000);
-    
-  
+  try {
+    const { data, error } = await client
+      .from("forecast_excel_uploads")
+      .select("sheet_name")
+      .not("sheet_name", "is", null)
+      .order("created_at", { ascending: false });
 
-  if (error) {
-    listEl.innerHTML = `<li style="color:red;">Error: ${error.message}</li>`;
-    return;
+    if (error) {
+      throw error;
+    }
+
+    console.log("Fetched rows from Supabase:", data?.map(d => d.sheet_name));
+
+    // Get unique sheet names and update global variable
+    const uniqueSheets = [...new Set(data?.map(row => row.sheet_name) || [])];
+    existingSheetNames = uniqueSheets; // Update global variable for validation
+
+    listEl.innerHTML = '';
+
+    if (uniqueSheets.length === 0) {
+      listEl.innerHTML = "<li>No uploads yet.</li>";
+      return;
+    }
+
+    uniqueSheets.forEach(sheet => {
+      const li = document.createElement("li");
+      li.style.display = "flex";
+      li.style.alignItems = "center";
+      li.style.marginBottom = "10px";
+      li.style.padding = "8px";
+      li.style.backgroundColor = "#f9f9f9";
+      li.style.borderRadius = "4px";
+      
+      const sheetNameSpan = document.createElement("span");
+      sheetNameSpan.textContent = sheet;
+      sheetNameSpan.style.flexGrow = "1";
+      sheetNameSpan.style.fontWeight = "500";
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.textContent = "Delete";
+      deleteBtn.style.marginLeft = "10px";
+      deleteBtn.style.padding = "4px 8px";
+      deleteBtn.style.backgroundColor = "#dc3545";
+      deleteBtn.style.color = "white";
+      deleteBtn.style.border = "none";
+      deleteBtn.style.borderRadius = "3px";
+      deleteBtn.style.cursor = "pointer";
+      deleteBtn.onclick = () => deleteForecastSheet(sheet);
+
+      li.appendChild(sheetNameSpan);
+      li.appendChild(deleteBtn);
+      listEl.appendChild(li);
+      
+      console.log("Created list item for:", sheet);
+    });
+
+  } catch (error) {
+    listEl.innerHTML = `<li style="color:red;">Error loading uploads: ${error.message}</li>`;
+    console.error("❌ Error loading forecast uploads:", error);
   }
-
-  console.log("Fetched rows from Supabase:", data.map(d => d.sheet_name));
-
-
-  const uniqueSheets = [...new Set(data.map(row => row.sheet_name))];
-  listEl.innerHTML = '';
-
-  if (uniqueSheets.length === 0) {
-    listEl.innerHTML = "<li>No uploads yet.</li>";
-    return;
-  }
-
-  uniqueSheets.forEach(sheet => {
-    const li = document.createElement("li");
-    li.textContent = sheet;
-  
-    const btn = document.createElement("button");
-    btn.textContent = "Delete";
-    btn.style.marginLeft = "10px";
-    btn.onclick = () => deleteForecastSheet(sheet);
-  
-    li.appendChild(btn);
-    listEl.appendChild(li);
-    console.log("Creating <li> for:", sheet);
-
-  });
-  
 }
 
 async function deleteForecastSheet(sheetName) {
   const confirmDelete = confirm(`Are you sure you want to delete all data for "${sheetName}"?`);
   if (!confirmDelete) return;
 
-  const { error } = await client
-    .from("forecast_excel_uploads")
-    .delete()
-    .eq("sheet_name", sheetName);
+  try {
+    const { error } = await client
+      .from("forecast_excel_uploads")
+      .delete()
+      .eq("sheet_name", sheetName);
 
-  if (error) {
-    alert("❌ Error deleting sheet: " + error.message);
-  } else {
+    if (error) {
+      throw error;
+    }
+
     alert(`✅ Deleted all forecast data for "${sheetName}"`);
-
-    // ✅ Refresh the list to remove it from view
+    
+    // Refresh the list to remove it from view
     await loadForecastUploadList();
+    
+  } catch (error) {
+    alert("❌ Error deleting sheet: " + error.message);
+    console.error("❌ Delete error:", error);
   }
 }
 
+// ✅ OBSERVATION UPLOAD FUNCTIONS
 
+// List observation uploads
+async function listObservationUploads() {
+  const listEl = document.getElementById("observationUploadList");
+  listEl.innerHTML = "<li>Loading...</li>";
 
+  try {
+    const { data, error } = await client
+      .from("observation_data_flat")
+      .select("forecast_date")
+      .order("created_at", { ascending: false })
+      .limit(100);
 
+    if (error) {
+      throw error;
+    }
+
+    // Get unique dates
+    const uniqueDates = [...new Set(data?.map(row => row.forecast_date) || [])];
+    
+    listEl.innerHTML = '';
+
+    if (uniqueDates.length === 0) {
+      listEl.innerHTML = "<li>No observation uploads yet.</li>";
+      return;
+    }
+
+    uniqueDates.forEach(date => {
+      const li = document.createElement("li");
+      li.style.display = "flex";
+      li.style.alignItems = "center";
+      li.style.marginBottom = "8px";
+      li.style.padding = "6px";
+      li.style.backgroundColor = "#f0f8ff";
+      li.style.borderRadius = "4px";
+      
+      const dateSpan = document.createElement("span");
+      dateSpan.textContent = `Observation data for: ${date}`;
+      dateSpan.style.flexGrow = "1";
+      
+      li.appendChild(dateSpan);
+      listEl.appendChild(li);
+    });
+
+  } catch (error) {
+    listEl.innerHTML = `<li style="color:red;">Error loading observation uploads: ${error.message}</li>`;
+    console.error("❌ Error loading observation uploads:", error);
+  }
+}
+
+// ✅ UPDATED OBSERVATION UPLOAD FUNCTION
+document.getElementById("uploadObservationButton").addEventListener("click", async () => {
+  const fileInput = document.getElementById("observationUploadInput");
+  const file = fileInput.files[0];
+
+  if (!file) {
+    alert("Please select an Excel file.");
+    return;
+  }
+
+  console.log("📂 Starting observation file upload...");
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      
+      // Read Excel with specific options
+      const workbook = XLSX.read(data, { 
+        type: "array",
+        cellDates: true,
+        cellStyles: true,
+        sheetStubs: false
+      });
+      
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      
+      console.log("📊 Sheet name:", sheetName);
+      
+      // Get the raw data first to see what we're working with
+      const jsonRaw = XLSX.utils.sheet_to_json(worksheet, { 
+        header: 1,
+        defval: '',
+        blankrows: false
+      });
+      
+      console.log("📋 First few raw rows:", jsonRaw.slice(0, 3));
+      
+      // Now get structured data
+      const json = XLSX.utils.sheet_to_json(worksheet, {
+        defval: null,
+        blankrows: false
+      });
+
+      console.log("📋 First structured row:", json[0]);
+      console.log("📋 Total rows found:", json.length);
+
+      if (json.length === 0) {
+        alert("Sheet is empty or has no valid data.");
+        return;
+      }
+
+      const entries = [];
+      let skippedCount = 0;
+
+      for (let i = 0; i < json.length; i++) {
+        const row = json[i];
+        
+        // Try different possible column names for date
+        const forecastDateRaw = row["forecast_date"] || 
+                               row["date"] || 
+                               row["Date"] || 
+                               row["Forecast_Date"] ||
+                               row["FORECAST_DATE"];
+                               
+        // Try different possible column names for district
+        const district = (row["district_name"] || 
+                         row["district"] || 
+                         row["District"] || 
+                         row["District_Name"] ||
+                         row["DISTRICT_NAME"] || "").toString().trim();
+
+        console.log(`🔍 Row ${i + 1} - Date raw:`, forecastDateRaw, "District:", district);
+
+        if (!district || (!forecastDateRaw && forecastDateRaw !== 0)) {
+          console.warn(`⚠️ Row ${i + 1} skipped: missing district or date`, { district, forecastDateRaw });
+          skippedCount++;
+          continue;
+        }
+
+        const forecast_date = formatDateObservation(forecastDateRaw);
+        if (!forecast_date) {
+          console.warn(`⚠️ Row ${i + 1} skipped: could not parse date "${forecastDateRaw}"`);
+          skippedCount++;
+          continue;
+        }
+
+        entries.push({
+          forecast_date,
+          district_name: district,
+          rainfall: parseNullableFloat(row["rainfall"]),
+          temp_max_c: parseNullableFloat(row["temp_max_c"]),
+          temp_min_c: parseNullableFloat(row["temp_min_c"]),
+          humidity_1: parseNullableFloat(row["humidity_1"]),
+          humidity_2: parseNullableFloat(row["humidity_2"]),
+          wind_speed_kmph: parseNullableFloat(row["wind_speed_kmph"]),
+          wind_direction_deg: parseNullableFloat(row["wind_direction_deg"]),
+          cloud_cover_octa: parseNullableFloat(row["cloud_cover_octa"]),
+        });
+      }
+
+      console.log(`📊 Processing complete: ${entries.length} valid entries, ${skippedCount} skipped`);
+
+      if (entries.length === 0) {
+        alert(`⚠️ No valid observation data found. ${skippedCount} rows were skipped. Please check the console for details.`);
+        return;
+      }
+
+      // Show a sample of what we're about to upload
+      console.log("📤 Sample entry to upload:", entries[0]);
+
+      const { error } = await client
+        .from("observation_data_flat")
+        .insert(entries);
+
+      if (error) {
+        console.error("❌ Observation upload failed:", error);
+        alert("Upload failed: " + error.message);
+      } else {
+        alert(`✅ Successfully uploaded ${entries.length} observation records!`);
+        fileInput.value = "";
+        listObservationUploads();
+      }
+      
+    } catch (err) {
+      console.error("❌ File processing error:", err);
+      alert("Error processing file: " + err.message);
+    }
+  };
+
+  reader.readAsArrayBuffer(file);
+});
 
 //DATE FORMATTING 
 
@@ -479,168 +734,12 @@ function formatDateObservation(dateStr) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-
-
-// ✅ UPDATED OBSERVATION UPLOAD FUNCTION
-document.getElementById("uploadObservationButton").addEventListener("click", async () => {
-  const fileInput = document.getElementById("observationUploadInput");
-  const file = fileInput.files[0];
-
-  if (!file) {
-    alert("Please select an Excel file.");
-    return;
-  }
-
-  console.log("📂 Starting observation file upload...");
-
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    try {
-      const data = new Uint8Array(e.target.result);
-      
-      // Read Excel with specific options
-      const workbook = XLSX.read(data, { 
-        type: "array",
-        cellDates: true,
-        cellStyles: true,
-        sheetStubs: false
-      });
-      
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      
-      console.log("📊 Sheet name:", sheetName);
-      
-      // Get the raw data first to see what we're working with
-      const jsonRaw = XLSX.utils.sheet_to_json(worksheet, { 
-        header: 1,
-        defval: '',
-        blankrows: false
-      });
-      
-      console.log("📋 First few raw rows:", jsonRaw.slice(0, 3));
-      
-      // Now get structured data
-      const json = XLSX.utils.sheet_to_json(worksheet, {
-        defval: null,
-        blankrows: false
-      });
-
-      
-
-      console.log("📋 First structured row:", json[0]);
-      console.log("📋 Total rows found:", json.length);
-
-      if (json.length === 0) {
-        alert("Sheet is empty or has no valid data.");
-        return;
-      }
-
-      const entries = [];
-      let skippedCount = 0;
-
-      for (let i = 0; i < json.length; i++) {
-        const row = json[i];
-        
-        // Try different possible column names for date
-        const forecastDateRaw = row["forecast_date"] || 
-                               row["date"] || 
-                               row["Date"] || 
-                               row["Forecast_Date"] ||
-                               row["FORECAST_DATE"];
-                               
-        // Try different possible column names for district
-        const district = (row["district_name"] || 
-                         row["district"] || 
-                         row["District"] || 
-                         row["District_Name"] ||
-                         row["DISTRICT_NAME"] || "").toString().trim();
-
-        console.log(`🔍 Row ${i + 1} - Date raw:`, forecastDateRaw, "District:", district);
-
-        if (!district || (!forecastDateRaw && forecastDateRaw !== 0)) {
-          console.warn(`⚠️ Row ${i + 1} skipped: missing district or date`, { district, forecastDateRaw });
-          skippedCount++;
-          continue;
-        }
-
-        const forecast_date = formatDateObservation(forecastDateRaw);
-        if (!forecast_date) {
-          console.warn(`⚠️ Row ${i + 1} skipped: could not parse date "${forecastDateRaw}"`);
-          skippedCount++;
-          continue;
-        }
-
-        entries.push({
-          forecast_date,
-          district_name: district,
-          rainfall: parseNullableFloat(row["rainfall"]),
-          temp_max_c: parseNullableFloat(row["temp_max_c"]),
-          temp_min_c: parseNullableFloat(row["temp_min_c"]),
-          humidity_1: parseNullableFloat(row["humidity_1"]),
-          humidity_2: parseNullableFloat(row["humidity_2"]),
-          wind_speed_kmph: parseNullableFloat(row["wind_speed_kmph"]),
-          wind_direction_deg: parseNullableFloat(row["wind_direction_deg"]),
-          cloud_cover_octa: parseNullableFloat(row["cloud_cover_octa"]),
-        });
-      }
-
-      console.log(`📊 Processing complete: ${entries.length} valid entries, ${skippedCount} skipped`);
-
-      if (entries.length === 0) {
-        alert(`⚠️ No valid observation data found. ${skippedCount} rows were skipped. Please check the console for details.`);
-        return;
-      }
-
-      // Show a sample of what we're about to upload
-      console.log("📤 Sample entry to upload:", entries[0]);
-
-      const { error } = await client
-        .from("observation_data_flat")
-        .insert(entries);
-
-      if (error) {
-        console.error("❌ Observation upload failed:", error);
-        alert("Upload failed: " + error.message);
-      } else {
-        alert(`✅ Successfully uploaded ${entries.length} observation records!`);
-        fileInput.value = "";
-        listObservationUploads();
-      }
-      
-    } catch (err) {
-      console.error("❌ File processing error:", err);
-      alert("Error processing file: " + err.message);
-    }
-  };
-
-  reader.readAsArrayBuffer(file);
-});
-
-// ✅ Helper function (keep this the same)
+// ✅ Helper function
 function parseNullableFloat(val) {
   if (val === null || val === undefined || val === '') return null;
   const n = parseFloat(val);
   return isNaN(n) ? null : n;
 }
-
-
-
-
-
-function parseNullableFloat(val) {
-  const n = parseFloat(val);
-  return isNaN(n) ? null : n;
-}
-
-
-// 🔄 Load on DOM Ready
-document.addEventListener("DOMContentLoaded", () => {
-  loadForecastUploadList();
-});
-
-
-
 
 
 

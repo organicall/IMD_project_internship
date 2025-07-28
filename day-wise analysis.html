@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Daily Forecast Analysis</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <h1>Weather Portal - Daily Analysis</h1>
+    <nav>
+      <a href="entry_page.html">Entry Page</a>
+      <a href="individual_tables.html">Individual tables</a>
+      <a href="verification.html">Verification</a>
+      <a href="daily_analysis.html">Daily Analysis</a>
+      <a href="about.html">About</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <h1>Daily Forecast & Observation Analysis</h1>
+
+    <!-- Forecast Upload Section -->
+    <div class="upload-section">
+      <h2>📊 Upload Forecast Data</h2>
+      <div class="form-group">
+        <label for="forecastExcelInput">Select Forecast Excel File:</label>
+        <input type="file" id="forecastExcelInput" accept=".xlsx,.xls" />
+      </div>
+      
+      <div class="form-group">
+        <label for="forecastSheetNameInput">Forecast Sheet Name:</label>
+        <input type="text" id="forecastSheetNameInput" placeholder="Enter unique sheet name" />
+        <div id="forecastSheetValidation" style="display: none; color: red; font-size: 14px; margin-top: 5px;"></div>
+      </div>
+      
+      <button id="uploadForecastBtn" >Upload Forecast Data</button>
+      <div id="forecastUploadStatus"></div>
+      
+      <h3>Existing Forecast Uploads:</h3>
+      <ul id="forecastUploadList">
+        <li>Loading...</li>
+      </ul>
+    </div>
+
+    <!-- Observation Upload Section -->
+    <div class="upload-section">
+      <h2>🌡️ Upload Observation Data</h2>
+      <div class="form-group">
+        <label for="observationExcelInput">Select Observation Excel File:</label>
+        <input type="file" id="observationExcelInput" accept=".xlsx,.xls" />
+      </div>
+      
+      <div class="form-group">
+        <label for="observationSheetNameInput">Observation Sheet Name:</label>
+        <input type="text" id="observationSheetNameInput" placeholder="Enter unique sheet name" />
+        <div id="observationSheetValidation" style="display: none; color: red; font-size: 14px; margin-top: 5px;"></div>
+      </div>
+      
+      <button id="uploadObservationBtn" >Upload Observation Data</button>
+      <div id="observationUploadStatus"></div>
+      
+      <h3>Existing Observation Uploads:</h3>
+      <ul id="observationUploadList">
+        <li>Loading...</li>
+      </ul>
+    </div>
+
+    <!-- Analysis Section -->
+    <div class="analysis-section">
+      <h2>📈 Daily Analysis</h2>
+      <div class="form-group">
+        <label for="daySelect">Select Day:</label>
+        <select id="daySelect">
+          <option value="">-- Select Day --</option>
+          <option value="1">Day 1</option>
+          <option value="2">Day 2</option>
+          <option value="3">Day 3</option>
+          <option value="4">Day 4</option>
+          <option value="5">Day 5</option>
+          <option value="6">Day 6</option>
+          <option value="7">Day 7</option>
+        </select>
+      </div>
+      
+      <button id="analyzeBtn">🔍 Analyze All Districts</button>
+      
+      <div id="analysisLoadingMsg" style="display: none;">
+        🔄 Analyzing data for all districts and parameters, please wait...
+      </div>
+      
+      <div id="analysisErrorMsg" style="display: none;">
+      </div>
+      
+      <div id="analysisResultsSection" style="display: none;">
+        <table id="analysisResultsTable">
+          <!-- Analysis results will be populated here -->
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="day-wise analysis.js"></script>
+</body>
+</html>

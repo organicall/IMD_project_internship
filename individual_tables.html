@@ -22,7 +22,7 @@
 
   <!-- Forecast Section -->
   <section>
-    <h2> Forecast Data</h2>
+    <h2>Forecast Data</h2>
     <label for="filterDay">Select Day:</label>
     <select id="filterDay">
       <option value="">-- Day --</option>
@@ -42,36 +42,36 @@
 
     <div id="filteredResult" style="margin-top: 20px;"></div>
     
-   <!-- 🔼 Forecast Excel Upload Section -->
-<h3>Upload Forecast Data (Excel)</h3>
-<input type="file" id="forecastExcelInput" accept=".xlsx" />
-<br><br>
-<label for="forecastSheetNameInput">Enter Sheet Name:</label>
-<input type="text" id="forecastSheetNameInput" placeholder="e.g. forecast_july25" />
+    <!-- 🔼 Forecast Excel Upload Section -->
+    <h3>Upload Forecast Data (Excel)</h3>
+    <input type="file" id="forecastExcelInput" accept=".xlsx" />
+    <br><br>
+    <label for="forecastSheetNameInput">Enter Sheet Name:</label>
+    <input type="text" id="forecastSheetNameInput" placeholder="e.g. forecast_july25" />
+    <div id="sheetNameValidation" style="margin-top: 5px; color: red; display: none;"></div>
 
-<button id="uploadForecastToDB" >Upload Forecast Data</button>
-<p id="forecastUploadStatus"></p>
-<h3>Forecast Uploads</h3>
+    <button id="uploadForecastToDB">Upload Forecast Data</button>
+    <p id="forecastUploadStatus"></p>
 
-<h3>Uploaded Forecast Sheets</h3>
-<ul id="forecastUploadList"></ul>
+    <!-- 📋 Uploaded Forecast Sheets List -->
+    <h3>Uploaded Forecast Sheets</h3>
+    <div id="forecastListContainer">
+      <ul id="forecastUploadList">
+        <li>Loading...</li>
+      </ul>
+    </div>
+  </section>
 
-
-
+  <!-- Observation Section -->
+  <section>
+    <h3>Upload Observation Excel Sheet</h3>
+    <input type="file" id="observationUploadInput" accept=".xlsx" />
+    <button id="uploadObservationButton">Upload Observation Data</button>
     
-
-    
-    
-<h3>Upload Observation Excel Sheet</h3>
-<input type="file" id="observationUploadInput" accept=".xlsx" />
-<button id="uploadObservationButton">Upload Observation Data</button>
-<!--list -->
-<h3>Observation Uploads</h3>
-<ul id="observationUploadList"></ul>
-
-  
-
-  
+    <!-- 📋 Observation Uploads List -->
+    <h3>Observation Uploads</h3>
+    <ul id="observationUploadList"></ul>
+  </section>
 
   <!-- Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
