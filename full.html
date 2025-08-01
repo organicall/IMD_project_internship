@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Forecast Allocator & Verification</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="style.css"></script>
+    
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <h1>🌤️ Weather Portal - Forecast Allocator</h1>
+    <nav>
+      <a href="entry_page.html">Entry Page</a>
+      <a href="individual_tables.html">Individual Tables</a>
+      <a href="verification.html">Verification</a>
+      <a href="day-wise analysis.html">Daily Analysis</a>
+      <a href="forecast_allocator.html">Forecast Allocator</a>
+      <a href="about.html">About</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <!-- File Upload Section -->
+    <div class="section">
+      <h2>📊 Upload Forecast Data</h2>
+      <div class="form-group">
+        <label for="fileInput">Select Forecast Excel File:</label>
+        <input type="file" id="fileInput" accept=".xlsx,.xls">
+      </div>
+      
+      <div class="form-group">
+        <label for="holidayInput">Enter Holidays (MM/DD/YYYY format, comma-separated):</label>
+        <textarea id="holidayInput" placeholder="e.g. 07/23/2025, 07/26/2025, 08/15/2025" rows="3"></textarea>
+      </div>
+      
+      <div class="form-group">
+        <label for="sheetNameInput">Sheet Name for Database Storage:</label>
+        <input type="text" id="sheetNameInput" placeholder="Enter unique sheet name">
+        <div id="sheetNameValidation" style="display: none; color: red; font-size: 14px; margin-top: 5px;"></div>
+      </div>
+      
+      <button class="btn" onclick="processForecast()">🚀 Process & Allocate Forecast Days</button>
+      <button class="btn" id="saveToDatabaseBtn" onclick="saveToDatabase()" disabled>💾 Save to Database</button>
+      
+      <div id="processingStatus"></div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="section" id="filterSection" style="display: none;">
+      <h2>🔍 Filter Results</h2>
+      <div class="filter-buttons" id="filterButtons">
+        <button class="btn" onclick="filterByDay('All')">Show All</button>
+        <button class="btn" onclick="filterByDay('Day1')">Day 1</button>
+        <button class="btn" onclick="filterByDay('Day2')">Day 2</button>
+        <button class="btn" onclick="filterByDay('Day3')">Day 3</button>
+        <button class="btn" onclick="filterByDay('Day4')">Day 4</button>
+        <button class="btn" onclick="filterByDay('Day5')">Day 5</button>
+      </div>
+    </div>
+
+    <!-- Results Section -->
+    <div class="section" id="resultsSection" style="display: none;">
+      <h2>📈 Processed Forecast Data</h2>
+      <div class="loading" id="loadingIndicator">
+        <div>🔄 Processing data...</div>
+      </div>
+      <div id="result"></div>
+    </div>
+
+  <!-- Replace your existing observation upload section with this complete section -->
+<div class="section">
+    <h2>📈 Upload Observation Data</h2>
+    
+    <div class="form-group">
+      <label for="observationFileInput">Select Observation Excel File:</label>
+      <input type="file" id="observationFileInput" accept=".xlsx,.xls">
+    </div>
+    
+    <div class="form-group">
+      <label for="observationHolidayInput">Enter Holidays for Observation (MM/DD/YYYY format, comma-separated):</label>
+      <textarea id="observationHolidayInput" placeholder="e.g. 07/23/2025, 07/26/2025, 08/15/2025" rows="3"></textarea>
+    </div>
+    
+    <div class="form-group">
+      <label for="observationSheetNameInput">Sheet Name for Observation Database Storage:</label>
+      <input type="text" id="observationSheetNameInput" placeholder="Enter unique observation sheet name">
+      <div id="observationSheetNameValidation" style="display: none; color: red; font-size: 14px; margin-top: 5px;"></div>
+    </div>
+    
+    <button class="btn" onclick="processObservation()">🚀 Process Observation Data</button>
+    <button class="btn" id="saveObservationToDatabaseBtn" onclick="saveObservationToDatabase()" disabled>💾 Save Observation to Database</button>
+    
+    <div id="observationProcessingStatus"></div>
+</div>
+  
+  <!-- Update the verification section to include more options -->
+  <div class="section verification-section" id="verificationSection" style="display: none;">
+    <h2>✅ Data Verification & Analysis</h2>
+    
+    <!-- Enhanced Verification Controls -->
+    <div class="form-group">
+      <h3>🔍 Parameter-wise District Comparison</h3>
+      <label for="verificationDistrict">Select District for Verification:</label>
+      <select id="verificationDistrict">
+        <option value="">-- Select District --</option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label for="verificationParameter">Select Parameter for Verification:</label>
+      <select id="verificationParameter">
+        <option value="">-- Select Parameter --</option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label for="verificationDay">Select Day for Verification:</label>
+      <select id="verificationDay">
+        <option value="">-- Select Day --</option>
+        <option value="Day1">Day 1</option>
+        <option value="Day2">Day 2</option>
+        <option value="Day3">Day 3</option>
+        <option value="Day4">Day 4</option>
+        <option value="Day5">Day 5</option>
+      </select>
+    </div>
+    
+    <button class="btn" onclick="performVerification()">🔍 Compare Forecast vs Observation</button>
+    
+    <!-- District-only Analysis -->
+    <div class="form-group" style="margin-top: 30px; border-top: 2px solid #ddd; padding-top: 20px;">
+      <h3>📊 District Analysis (All Parameters)</h3>
+      <label for="districtOnlyAnalysis">Select District for Complete Analysis:</label>
+      <select id="districtOnlyAnalysis">
+        <option value="">-- Select District --</option>
+      </select>
+    </div>
+    
+    <button class="btn" onclick="performDistrictAnalysis()">📈 Analyze All Parameters for District</button>
+    
+    <!-- Results Display Areas -->
+    <div id="verificationResults" style="display: none;">
+      <h3>Verification Results</h3>
+      <div id="verificationTable"></div>
+    </div>
+    
+    <!-- Loading and Error Messages -->
+    <div id="verificationLoadingMessage" style="display: none; color: #007bff; margin: 10px 0;">
+      🔄 Loading verification data...
+    </div>
+    <div id="verificationErrorMessage" style="display: none; color: #dc3545; margin: 10px 0;"></div>
+    
+    <!-- Comparison Table -->
+    <table id="verificationComparisonTable" style="display: none; width: 100%; margin-top: 20px;">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Forecast Value</th>
+          <th>Observation Value</th>
+          <th>Absolute Difference</th>
+          <th>Classification</th>
+        </tr>
+      </thead>
+      <tbody id="verificationComparisonBody"></tbody>
+    </table>
+    
+    <!-- District Analysis Table -->
+    <table id="districtAnalysisTable" style="display: none; width: 100%; margin-top: 20px;">
+      <thead id="districtAnalysisHeader"></thead>
+      <tbody id="districtAnalysisBody"></tbody>
+    </table>
+    
+    <!-- Summary Table -->
+    <table id="verificationSummaryTable" style="display: none; width: 100%; margin-top: 20px;">
+      <thead id="verificationSummaryHeader"></thead>
+      <tbody id="verificationSummaryBody"></tbody>
+    </table>
+  </div>
+
+    <!-- Verification Section -->
+    <div class="section verification-section" id="verificationSection" style="display: none;">
+      <h2>✅ Data Verification</h2>
+      <div class="form-group">
+        <label for="verificationDistrict">Select District for Verification:</label>
+        <select id="verificationDistrict">
+          <option value="">-- Select District --</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="verificationParameter">Select Parameter for Verification:</label>
+        <label for="verificationDay">Select Day for Verification:</label>
+  <select id="verificationDay">
+    <option value="">-- Select Day --</option>
+    <option value="Day1">Day 1</option>
+    <option value="Day2">Day 2</option>
+    <option value="Day3">Day 3</option>
+    <option value="Day4">Day 4</option>
+    <option value="Day5">Day 5</option>
+  </select>
+        <select id="verificationParameter">
+          <option value="">-- Select Parameter --</option>
+        </select>
+      </div>
+      
+      <button class="btn" onclick="performVerification()">🔍 Verify Data Quality</button>
+      
+      <div id="verificationResults" style="display: none;">
+        <h3>Verification Results</h3>
+        <div id="verificationTable"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="full.js"></script>
+</body>
+</html>
