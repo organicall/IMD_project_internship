@@ -387,15 +387,15 @@ function processForecast() {
 
   try {
     const holidaysInput = document.getElementById('holidayInput').value;
-    const holidays = holidaysInput
-      .split(',')
-      .map(h => {
-        const trimmed = h.trim();
-        if (!trimmed) return null;
-        const date = parseDate(trimmed);
-        return date ? formatDate(date) : null;
-      })
-      .filter(h => h !== null);
+const holidays = holidaysInput
+  .split(',')
+  .map(h => {
+    const trimmed = h.trim();
+    if (!trimmed) return null;
+    const date = new Date(trimmed);
+    return !isNaN(date.getTime()) ? formatDate(date) : null;
+  })
+  .filter(h => h !== null);
 
     console.log('Parsed holidays:', holidays);
 
@@ -539,8 +539,8 @@ function processObservation() {
           .map(h => {
             const trimmed = h.trim();
             if (!trimmed) return null;
-            const date = parseDate(trimmed);
-            return date ? formatDate(date) : null;
+            const date = new Date(trimmed);
+            return !isNaN(date.getTime()) ? formatDate(date) : null;
           })
           .filter(h => h !== null);
   
@@ -748,7 +748,9 @@ function renderTable(data) {
     <div style="margin-bottom: 15px;">
       <strong>Total Records: ${data.length}</strong>
     </div>
-    <div style="overflow-x: auto;">
+    
+    <div style="max-height: 500px; overflow: auto; border: 1px solid #ccc; border-radius: 8px;">
+
       <table>
         <thead>
           <tr>
@@ -828,7 +830,8 @@ function renderObservationTable(data) {
       <div style="margin-bottom: 15px;">
         <strong>Total Observation Records: ${data.length}</strong>
       </div>
-      <div style="overflow-x: auto;">
+      <div style="max-height: 500px; overflow: auto; border: 1px solid #ccc; border-radius: 8px;">
+
         <table>
           <thead>
             <tr>
@@ -1183,3 +1186,6 @@ function showObservationStatus(message, type) {
     }
   }
 
+
+  
+  

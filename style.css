@@ -106,3 +106,18 @@ th, td {
   cursor: pointer;      /* changes mouse cursor to pointer */
 }
 
+.table-scroll {
+  max-height: 400px; /* adjust height as needed */
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  margin-top: 1rem;
+  border-radius: 6px;
+}
+
+/* Optional: Make header sticky */
+.table-scroll table thead th {
+  position: sticky;
+  top: 0;
+  background-color: #f5f5f5;
+  z-index: 1;
+}
