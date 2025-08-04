@@ -102,124 +102,106 @@
     <div id="observationProcessingStatus"></div>
 </div>
   
-  <!-- Update the verification section to include more options -->
-  <div class="section verification-section" id="verificationSection" style="display: none;">
-    <h2>✅ Data Verification & Analysis</h2>
-    
-    <!-- Enhanced Verification Controls -->
-    <div class="form-group">
-      <h3>🔍 Parameter-wise District Comparison</h3>
-      <label for="verificationDistrict">Select District for Verification:</label>
-      <select id="verificationDistrict">
-        <option value="">-- Select District --</option>
-      </select>
-    </div>
+<!--new analysis portiion-->
+<!-- Add this section to your HTML file after the observation upload section -->
+<div class="section">
+    <h2>📊 Forecast vs Observation Comparison</h2>
     
     <div class="form-group">
-      <label for="verificationParameter">Select Parameter for Verification:</label>
-      <select id="verificationParameter">
-        <option value="">-- Select Parameter --</option>
-      </select>
+        <label for="comparisonDay">Select Day:</label>
+        <select id="comparisonDay">
+            <option value="">-- Select Day --</option>
+            <option value="Day1">Day 1</option>
+            <option value="Day2">Day 2</option>
+            <option value="Day3">Day 3</option>
+            <option value="Day4">Day 4</option>
+            <option value="Day5">Day 5</option>
+        </select>
     </div>
     
     <div class="form-group">
-      <label for="verificationDay">Select Day for Verification:</label>
-      <select id="verificationDay">
-        <option value="">-- Select Day --</option>
-        <option value="Day1">Day 1</option>
-        <option value="Day2">Day 2</option>
-        <option value="Day3">Day 3</option>
-        <option value="Day4">Day 4</option>
-        <option value="Day5">Day 5</option>
-      </select>
+        <label for="comparisonDistrict">Select District:</label>
+        <select id="comparisonDistrict">
+            <option value="">-- Select District --</option>
+            <!-- Districts will be populated by JavaScript -->
+        </select>
     </div>
     
-    <button class="btn" onclick="performVerification()">🔍 Compare Forecast vs Observation</button>
-    
-    <!-- District-only Analysis -->
-    <div class="form-group" style="margin-top: 30px; border-top: 2px solid #ddd; padding-top: 20px;">
-      <h3>📊 District Analysis (All Parameters)</h3>
-      <label for="districtOnlyAnalysis">Select District for Complete Analysis:</label>
-      <select id="districtOnlyAnalysis">
-        <option value="">-- Select District --</option>
-      </select>
+    <div class="form-group">
+        <label for="comparisonParameter">Select Parameter:</label>
+        <select id="comparisonParameter">
+            <option value="">-- Select Parameter --</option>
+            <option value="rainfall">Rainfall (mm)</option>
+            <option value="temp_max_c">Temp Max (°C)</option>
+            <option value="temp_min_c">Temp Min (°C)</option>
+            <option value="humidity_1">Humidity Morning (%)</option>
+            <option value="humidity_2">Humidity Evening (%)</option>
+            <option value="wind_speed_kmph">Wind Speed (kmph)</option>
+            <option value="wind_direction_deg">Wind Direction (deg)</option>
+            <option value="cloud_cover_octa">Cloud Cover (octa)</option>
+        </select>
     </div>
     
-    <button class="btn" onclick="performDistrictAnalysis()">📈 Analyze All Parameters for District</button>
+    <button class="btn" onclick="performComparison()">🔍 Analyze Comparison</button>
     
-    <!-- Results Display Areas -->
-    <div id="verificationResults" style="display: none;">
-      <h3>Verification Results</h3>
-      <div id="verificationTable"></div>
-    </div>
-    
-    <!-- Loading and Error Messages -->
-    <div id="verificationLoadingMessage" style="display: none; color: #007bff; margin: 10px 0;">
-      🔄 Loading verification data...
-    </div>
-    <div id="verificationErrorMessage" style="display: none; color: #dc3545; margin: 10px 0;"></div>
-    
-    <!-- Comparison Table -->
-    <table id="verificationComparisonTable" style="display: none; width: 100%; margin-top: 20px;">
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Forecast Value</th>
-          <th>Observation Value</th>
-          <th>Absolute Difference</th>
-          <th>Classification</th>
-        </tr>
-      </thead>
-      <tbody id="verificationComparisonBody"></tbody>
-    </table>
-    
-    <!-- District Analysis Table -->
-    <table id="districtAnalysisTable" style="display: none; width: 100%; margin-top: 20px;">
-      <thead id="districtAnalysisHeader"></thead>
-      <tbody id="districtAnalysisBody"></tbody>
-    </table>
-    
-    <!-- Summary Table -->
-    <table id="verificationSummaryTable" style="display: none; width: 100%; margin-top: 20px;">
-      <thead id="verificationSummaryHeader"></thead>
-      <tbody id="verificationSummaryBody"></tbody>
-    </table>
-  </div>
+    <div id="comparisonProcessingStatus"></div>
+</div>
 
-    <!-- Verification Section -->
-    <div class="section verification-section" id="verificationSection" style="display: none;">
-      <h2>✅ Data Verification</h2>
-      <div class="form-group">
-        <label for="verificationDistrict">Select District for Verification:</label>
-        <select id="verificationDistrict">
-          <option value="">-- Select District --</option>
-        </select>
-      </div>
-      
-      <div class="form-group">
-        <label for="verificationParameter">Select Parameter for Verification:</label>
-        <label for="verificationDay">Select Day for Verification:</label>
-  <select id="verificationDay">
-    <option value="">-- Select Day --</option>
-    <option value="Day1">Day 1</option>
-    <option value="Day2">Day 2</option>
-    <option value="Day3">Day 3</option>
-    <option value="Day4">Day 4</option>
-    <option value="Day5">Day 5</option>
-  </select>
-        <select id="verificationParameter">
-          <option value="">-- Select Parameter --</option>
-        </select>
-      </div>
-      
-      <button class="btn" onclick="performVerification()">🔍 Verify Data Quality</button>
-      
-      <div id="verificationResults" style="display: none;">
-        <h3>Verification Results</h3>
-        <div id="verificationTable"></div>
-      </div>
+<!-- Results Section for Comparison -->
+<div class="section" id="comparisonResultsSection" style="display: none;">
+    <h2>📈 Comparison Analysis Results</h2>
+    
+    <!-- Statistics Cards -->
+    <div id="comparisonStats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;"></div>
+    
+    <!-- Detailed Table -->
+    <div id="comparisonTable" style="max-height: 600px; overflow: auto; border: 1px solid #ccc; border-radius: 8px;"></div>
+    
+    <!-- Export Button -->
+    <div style="margin-top: 20px;">
+        <button class="btn" onclick="exportComparisonToExcel()">📁 Export Comparison Results</button>
     </div>
+</div>
+
+<!--day based comparison-->
+<!-- Add this HTML section after the existing comparison section in your HTML file -->
+
+<!-- Comprehensive Analysis Section -->
+<div class="section">
+  <h2>📊 Comprehensive Analysis - All Districts & Parameters</h2>
+  
+  <div class="form-group">
+      <label for="comprehensiveDay">Select Day for Comprehensive Analysis:</label>
+      <select id="comprehensiveDay">
+          <option value="">-- Select Day --</option>
+          <option value="Day1">Day 1</option>
+          <option value="Day2">Day 2</option>
+          <option value="Day3">Day 3</option>
+          <option value="Day4">Day 4</option>
+          <option value="Day5">Day 5</option>
+      </select>
   </div>
+  
+  <button class="btn" onclick="performComprehensiveAnalysis()">🔍 Generate Comprehensive Report</button>
+  
+  <div id="comprehensiveProcessingStatus"></div>
+</div>
+
+<!-- Comprehensive Results Section -->
+<div class="section" id="comprehensiveResultsSection" style="display: none;">
+  <h2>📈 Comprehensive Analysis Results</h2>
+  
+  <!-- Summary -->
+  <div id="comprehensiveSummary"></div>
+  
+  <!-- Comprehensive Table -->
+  <div id="comprehensiveTable" style="max-height: 600px; overflow: auto; border: 1px solid #ccc; border-radius: 8px;"></div>
+  
+  <!-- Export Button -->
+  <div style="margin-top: 20px;">
+      <button class="btn" onclick="exportComprehensiveToExcel()">📁 Export Comprehensive Analysis</button>
+  </div>
+</div>
 
   <script src="full.js"></script>
 </body>

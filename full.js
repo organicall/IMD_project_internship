@@ -14,6 +14,372 @@ let observationRows = [];
 let processedObservationOutput = [];
 let existingObservationSheetNames = [];
 
+let comparisonResults = [];
+// Global variable for comprehensive results
+let comprehensiveResults = [];
+
+// Parameter names for display
+const parameterNames = {
+  'rainfall': 'Rainfall',
+  'temp_max_c': 'Maximum Temperature',
+  'temp_min_c': 'Minimum Temperature',
+  'humidity_1': 'Max. Relative Humidity',
+  'humidity_2': 'Min. Relative Humidity',
+  'wind_speed_kmph': 'Wind Speed',
+  'wind_direction_deg': 'Wind Direction',
+  'cloud_cover_octa': 'Cloud Cover'
+};
+
+// Perform comprehensive analysis for all districts and parameters
+async function performComprehensiveAnalysis() {
+  const day = document.getElementById('comprehensiveDay').value;
+  
+  if (!day) {
+    showComprehensiveStatus('❌ Please select a day for analysis.', 'error');
+    return;
+  }
+
+  if (processedOutput.length === 0) {
+    showComprehensiveStatus('❌ No forecast data available. Please process forecast data first.', 'error');
+    return;
+  }
+
+  if (processedObservationOutput.length === 0) {
+    showComprehensiveStatus('❌ No observation data available. Please process observation data first.', 'error');
+    return;
+  }
+
+  showComprehensiveStatus('🔍 Performing comprehensive analysis for all districts and parameters...', 'info');
+
+  try {
+    const dayNumber = parseInt(day.replace('Day', ''));
+    const results = [];
+    
+    // Get all unique districts
+    const allDistricts = [...new Set(processedOutput.map(row => row.district_name))];
+    const parameters = Object.keys(parameterNames);
+    
+    // For each district, analyze all parameters
+    for (const district of allDistricts) {
+      const districtResult = {
+        district: district,
+        parameters: {}
+      };
+      
+      for (const parameter of parameters) {
+        // Filter forecast data for this district and day
+        const forecastData = processedOutput.filter(row => 
+          row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
+          row.day_number === dayNumber
+        );
+
+        // Filter observation data for this district and day
+        const observationData = processedObservationOutput.filter(row => 
+          row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
+          row.day_number === dayNumber
+        );
+
+        if (forecastData.length > 0 && observationData.length > 0) {
+          // Create comparison data for this parameter
+          const comparisonData = createComparisonData(forecastData, observationData, parameter);
+          const statistics = calculateStatistics(comparisonData, parameter);
+          
+          districtResult.parameters[parameter] = {
+            correct: statistics.correct,
+            usable: statistics.usable,
+            unusable: statistics.unusable,
+            correctPlusUsable: statistics.correct + statistics.usable,
+            validDays: statistics.validDays,
+            missingDays: statistics.missingDays,
+            n1: statistics.n1,
+            n2: statistics.n2,
+            n3: statistics.n3
+          };
+        } else {
+          // No data available
+          districtResult.parameters[parameter] = {
+            correct: 0,
+            usable: 0,
+            unusable: 0,
+            correctPlusUsable: 0,
+            validDays: 0,
+            missingDays: 0,
+            n1: 0,
+            n2: 0,
+            n3: 0
+          };
+        }
+      }
+      
+      results.push(districtResult);
+    }
+
+    // Calculate state-wide averages
+    const stateAverages = calculateStateAverages(results, parameters);
+    
+    // Store results globally
+    comprehensiveResults = {
+      day: day,
+      districts: results,
+      stateAverages: stateAverages,
+      parameters: parameters
+    };
+
+    // Display results
+    displayComprehensiveResults(comprehensiveResults);
+    
+    document.getElementById('comprehensiveResultsSection').style.display = 'block';
+    showComprehensiveStatus(`✅ Comprehensive analysis completed for ${day}.`, 'success');
+
+  } catch (error) {
+    console.error('Comprehensive analysis error:', error);
+    showComprehensiveStatus('❌ Comprehensive analysis error: ' + error.message, 'error');
+  }
+}
+
+// Calculate state-wide averages
+function calculateStateAverages(results, parameters) {
+  const stateAverages = {};
+  
+  for (const parameter of parameters) {
+    let totalCorrect = 0;
+    let totalUsable = 0;
+    let totalUnusable = 0;
+    let totalCorrectPlusUsable = 0;
+    let districtsWithData = 0;
+    
+    results.forEach(district => {
+      if (district.parameters[parameter].validDays > 0) {
+        totalCorrect += district.parameters[parameter].correct;
+        totalUsable += district.parameters[parameter].usable;
+        totalUnusable += district.parameters[parameter].unusable;
+        totalCorrectPlusUsable += district.parameters[parameter].correctPlusUsable;
+        districtsWithData++;
+      }
+    });
+    
+    stateAverages[parameter] = {
+      correct: districtsWithData > 0 ? totalCorrect / districtsWithData : 0,
+      usable: districtsWithData > 0 ? totalUsable / districtsWithData : 0,
+      unusable: districtsWithData > 0 ? totalUnusable / districtsWithData : 0,
+      correctPlusUsable: districtsWithData > 0 ? totalCorrectPlusUsable / districtsWithData : 0,
+      districtsWithData: districtsWithData
+    };
+  }
+  
+  return stateAverages;
+}
+
+// Display comprehensive results
+function displayComprehensiveResults(results) {
+  // Display summary
+  const summaryDiv = document.getElementById('comprehensiveSummary');
+  summaryDiv.innerHTML = `
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+      <h4>Analysis Summary for ${results.day}</h4>
+      <p><strong>Total Districts Analyzed:</strong> ${results.districts.length}</p>
+      <p><strong>Parameters Analyzed:</strong> ${results.parameters.length} (${Object.values(parameterNames).join(', ')})</p>
+    </div>
+  `;
+
+  // Create comprehensive table
+  const tableDiv = document.getElementById('comprehensiveTable');
+  let tableHtml = `
+    <table style="width: 100%; font-size: 12px;">
+      <thead>
+        <tr style="background: #f8f9fa;">
+          <th rowspan="2" style="min-width: 150px; vertical-align: middle;">District</th>`;
+
+  // Add parameter headers
+  results.parameters.forEach(param => {
+    tableHtml += `
+      <th colspan="4" style="text-align: center; background: #e9ecef; border: 1px solid #ccc;">
+        ${parameterNames[param]}
+      </th>`;
+  });
+
+  tableHtml += `
+        </tr>
+        <tr style="background: #f8f9fa;">`;
+
+  // Add sub-headers for each parameter
+  results.parameters.forEach(param => {
+    tableHtml += `
+      <th style="background: #d4edda; font-size: 10px;">Correct</th>
+      <th style="background: #fff3cd; font-size: 10px;">Usable</th>
+      <th style="background: #f8d7da; font-size: 10px;">Unusable</th>
+      <th style="background: #cce5ff; font-size: 10px;">Correct+Usable</th>`;
+  });
+
+  tableHtml += `
+        </tr>
+      </thead>
+      <tbody>`;
+
+  // Add district rows
+  results.districts.forEach(district => {
+    tableHtml += `<tr>
+      <td style="font-weight: bold; background: #f8f9fa;">${district.district}</td>`;
+    
+    results.parameters.forEach(param => {
+      const data = district.parameters[param];
+      const correctClass = data.correct >= 70 ? 'style="background: #d4edda; font-weight: bold;"' : 
+                          data.correct >= 50 ? 'style="background: #fff3cd;"' : 
+                          'style="background: #f8d7da;"';
+      
+      tableHtml += `
+        <td ${correctClass}>${data.correct.toFixed(1)}</td>
+        <td style="background: #fff3cd;">${data.usable.toFixed(1)}</td>
+        <td style="background: #f8d7da;">${data.unusable.toFixed(1)}</td>
+        <td style="background: #cce5ff; font-weight: bold;">${data.correctPlusUsable.toFixed(1)}</td>`;
+    });
+    
+    tableHtml += '</tr>';
+  });
+
+  // Add state averages row
+  tableHtml += `
+    <tr style="background: #e9ecef; font-weight: bold; border-top: 3px solid #6c757d;">
+      <td style="background: #6c757d; color: white;">Andhra Pradesh State Average</td>`;
+  
+  results.parameters.forEach(param => {
+    const avg = results.stateAverages[param];
+    const correctClass = avg.correct >= 70 ? 'style="background: #d4edda; font-weight: bold;"' : 
+                        avg.correct >= 50 ? 'style="background: #fff3cd; font-weight: bold;"' : 
+                        'style="background: #f8d7da; font-weight: bold;"';
+    
+    tableHtml += `
+      <td ${correctClass}>${avg.correct.toFixed(1)}</td>
+      <td style="background: #fff3cd; font-weight: bold;">${avg.usable.toFixed(1)}</td>
+      <td style="background: #f8d7da; font-weight: bold;">${avg.unusable.toFixed(1)}</td>
+      <td style="background: #cce5ff; font-weight: bold;">${avg.correctPlusUsable.toFixed(1)}</td>`;
+  });
+  
+  tableHtml += '</tr>';
+
+  // Add quality indicators
+  tableHtml += `
+    <tr style="border-top: 2px solid #6c757d;">
+      <td colspan="${1 + results.parameters.length * 4}" style="padding: 15px; background: #f8f9fa;">
+        <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;">
+          <div><span style="background: #d4edda; padding: 5px 10px; border-radius: 5px;"><strong>GOOD:</strong> >=70%</span></div>
+          <div><span style="background: #fff3cd; padding: 5px 10px; border-radius: 5px;"><strong>MODERATE:</strong> >50% & <70%</span></div>
+          <div><span style="background: #f8d7da; padding: 5px 10px; border-radius: 5px;"><strong>POOR:</strong> <50%</span></div>
+        </div>
+      </td>
+    </tr>`;
+
+  tableHtml += '</tbody></table>';
+  
+  tableDiv.innerHTML = tableHtml;
+}
+
+// Export comprehensive results to Excel
+function exportComprehensiveToExcel() {
+  if (!comprehensiveResults || comprehensiveResults.districts.length === 0) {
+    showComprehensiveStatus('❌ No comprehensive results to export.', 'error');
+    return;
+  }
+
+  try {
+    const results = comprehensiveResults;
+    
+    // Prepare data for export
+    const exportData = [];
+    
+    // Add header row
+    const headerRow = { 'District': 'District' };
+    results.parameters.forEach(param => {
+      const paramName = parameterNames[param];
+      headerRow[`${paramName}_Correct`] = `${paramName} - Correct`;
+      headerRow[`${paramName}_Usable`] = `${paramName} - Usable`;
+      headerRow[`${paramName}_Unusable`] = `${paramName} - Unusable`;
+      headerRow[`${paramName}_CorrectPlusUsable`] = `${paramName} - Correct+Usable`;
+    });
+    
+    // Add district data
+    results.districts.forEach(district => {
+      const row = { 'District': district.district };
+      
+      results.parameters.forEach(param => {
+        const data = district.parameters[param];
+        const paramName = parameterNames[param];
+        row[`${paramName}_Correct`] = data.correct.toFixed(2);
+        row[`${paramName}_Usable`] = data.usable.toFixed(2);
+        row[`${paramName}_Unusable`] = data.unusable.toFixed(2);
+        row[`${paramName}_CorrectPlusUsable`] = data.correctPlusUsable.toFixed(2);
+      });
+      
+      exportData.push(row);
+    });
+
+    // Add state averages
+    const stateRow = { 'District': 'Andhra Pradesh State Average' };
+    results.parameters.forEach(param => {
+      const avg = results.stateAverages[param];
+      const paramName = parameterNames[param];
+      stateRow[`${paramName}_Correct`] = avg.correct.toFixed(2);
+      stateRow[`${paramName}_Usable`] = avg.usable.toFixed(2);
+      stateRow[`${paramName}_Unusable`] = avg.unusable.toFixed(2);
+      stateRow[`${paramName}_CorrectPlusUsable`] = avg.correctPlusUsable.toFixed(2);
+    });
+    exportData.push(stateRow);
+
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    
+    // Auto-size columns
+    const cols = Object.keys(exportData[0]).map(key => ({ width: 15 }));
+    ws['!cols'] = cols;
+    
+    XLSX.utils.book_append_sheet(wb, ws, `${results.day} Analysis`);
+
+    // Generate filename
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const filename = `Comprehensive_Analysis_${results.day}_${timestamp}.xlsx`;
+
+    // Save file
+    XLSX.writeFile(wb, filename);
+    
+    showComprehensiveStatus(`✅ Comprehensive analysis exported to ${filename}`, 'success');
+
+  } catch (error) {
+    console.error('Export error:', error);
+    showComprehensiveStatus('❌ Error exporting comprehensive analysis: ' + error.message, 'error');
+  }
+}
+
+// Show comprehensive status messages
+function showComprehensiveStatus(message, type) {
+  const statusDiv = document.getElementById('comprehensiveProcessingStatus');
+  
+  let className = 'status-message ';
+  switch (type) {
+    case 'success':
+      className += 'status-success';
+      break;
+    case 'error':
+      className += 'status-error';
+      break;
+    case 'info':
+    default:
+      className += 'status-info';
+      break;
+  }
+  
+  statusDiv.innerHTML = `<div class="${className}">${message}</div>`;
+  
+  // Auto-hide success/info messages after 5 seconds
+  if (type === 'success' || type === 'info') {
+    setTimeout(() => {
+      if (statusDiv.innerHTML.includes(message)) {
+        statusDiv.innerHTML = '';
+      }
+    }, 5000);
+  }
+}
+
 // Districts and Parameters for verification
 const districts = [
   "ALLURI SITHARAMA RAJU", "ANAKAPALLI", "ANANTAPUR", "ANNAMAYYA", "BAPATLA",
@@ -37,11 +403,11 @@ const parameterMapping = {
 // Initialize page
 document.addEventListener('DOMContentLoaded', async () => {
     await loadExistingSheetNames();
-    await loadExistingObservationSheetNames(); // ADD THIS LINE
+    await loadExistingObservationSheetNames();
     setupEventListeners();
-    setupObservationEventListeners(); // ADD THIS LINE
-    populateDropdowns();
-  });
+    setupObservationEventListeners();
+    populateComparisonDropdowns(); // ADD THIS LINE
+});
 
 // Setup event listeners
 function setupEventListeners() {
@@ -52,27 +418,22 @@ function setupObservationEventListeners() {
     document.getElementById('observationFileInput').addEventListener('change', handleObservationFileUpload);
     document.getElementById('observationSheetNameInput').addEventListener('input', validateObservationSheetName);
   }
+  
+  function populateComparisonDropdowns() {
+    // Populate district dropdown for comparison
+    const comparisonDistrictSelect = document.getElementById('comparisonDistrict');
+    if (comparisonDistrictSelect) {
+      comparisonDistrictSelect.innerHTML = '<option value="">-- Select District --</option>';
+      
+      districts.forEach(district => {
+        const option = document.createElement('option');
+        option.value = district;
+        option.textContent = district;
+        comparisonDistrictSelect.appendChild(option);
+      });
+    }
+  }
 
-// Populate dropdowns for verification
-function populateDropdowns() {
-  // Populate district dropdown
-  const districtSelect = document.getElementById('verificationDistrict');
-  districts.forEach(district => {
-    const option = document.createElement('option');
-    option.value = district;
-    option.textContent = district;
-    districtSelect.appendChild(option);
-  });
-
-  // Populate parameter dropdown
-  const parameterSelect = document.getElementById('verificationParameter');
-  Object.keys(parameterMapping).forEach(param => {
-    const option = document.createElement('option');
-    option.value = param;
-    option.textContent = param;
-    parameterSelect.appendChild(option);
-  });
-}
 
 // Load existing sheet names for validation
 async function loadExistingSheetNames() {
@@ -504,7 +865,7 @@ const holidays = holidaysInput
     document.getElementById('loadingIndicator').classList.remove('show');
     document.getElementById('filterSection').style.display = 'block';
     document.getElementById('resultsSection').style.display = 'block';
-    document.getElementById('verificationSection').style.display = 'block';
+    //document.getElementById('verificationSection').style.display = 'block';
     
     // Enable save button if sheet name is valid
     if (validateSheetName()) {
@@ -880,7 +1241,7 @@ function formatValue(value) {
   return typeof value === 'number' ? value.toFixed(2) : value;
 }
 
-// Save processed data to database
+// Save processed data to database for forecast
 async function saveToDatabase() {
   if (processedOutput.length === 0) {
     showStatus('❌ No processed data to save.', 'error');
@@ -1187,5 +1548,561 @@ function showObservationStatus(message, type) {
   }
 
 
+  async function performComparison() {
+  const day = document.getElementById('comparisonDay').value;
+  const district = document.getElementById('comparisonDistrict').value;
+  const parameter = document.getElementById('comparisonParameter').value;
   
+  if (!day || !district || !parameter) {
+    showComparisonStatus('❌ Please select day, district, and parameter for comparison.', 'error');
+    return;
+  }
+
+  if (processedOutput.length === 0) {
+    showComparisonStatus('❌ No forecast data available. Please process forecast data first.', 'error');
+    return;
+  }
+
+  if (processedObservationOutput.length === 0) {
+    showComparisonStatus('❌ No observation data available. Please process observation data first.', 'error');
+    return;
+  }
+
+  showComparisonStatus('🔍 Performing comparison analysis...', 'info');
+
+  try {
+    // Filter forecast data
+    const dayNumber = parseInt(day.replace('Day', ''));
+    const forecastData = processedOutput.filter(row => 
+      row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
+      row.day_number === dayNumber
+    );
+
+    // Filter observation data
+    const observationData = processedObservationOutput.filter(row => 
+      row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
+      row.day_number === dayNumber
+    );
+
+    if (forecastData.length === 0) {
+      showComparisonStatus('❌ No forecast data found for the selected criteria.', 'error');
+      return;
+    }
+
+    if (observationData.length === 0) {
+      showComparisonStatus('❌ No observation data found for the selected criteria.', 'error');
+      return;
+    }
+
+    // Create comparison results
+    const comparisonData = createComparisonData(forecastData, observationData, parameter);
+    const statistics = calculateStatistics(comparisonData, parameter);
+
+    // Store results globally for export
+    comparisonResults = {
+      data: comparisonData,
+      statistics: statistics,
+      metadata: {
+        day: day,
+        district: district,
+        parameter: parameter
+      }
+    };
+
+    // Display results
+    displayComparisonResults(comparisonData, statistics, day, district, parameter);
+    
+    document.getElementById('comparisonResultsSection').style.display = 'block';
+    showComparisonStatus(`✅ Comparison analysis completed for ${district} - ${parameter} - ${day}.`, 'success');
+
+  } catch (error) {
+    console.error('Comparison error:', error);
+    showComparisonStatus('❌ Comparison error: ' + error.message, 'error');
+  }
+}
+
+// Create comparison data by matching dates
+function createComparisonData(forecastData, observationData, parameter) {
+  const comparisonData = [];
+  
+  // Create a lookup for observation data
+  const obsLookup = {};
+  observationData.forEach(obs => {
+    const dateKey = obs.observation_date || obs.forecasted_date;
+    obsLookup[dateKey] = obs[parameter];
+  });
+
+  // Compare with forecast data
+  forecastData.forEach(forecast => {
+    const forecastDate = forecast.forecast_date || forecast.forecasted_date;
+    const forecastValue = forecast[parameter];
+    const observationValue = obsLookup[forecastDate];
+    
+    let absoluteDifference = null;
+    if (forecastValue !== null && observationValue !== null) {
+      absoluteDifference = Math.abs(forecastValue - observationValue);
+    }
+
+    comparisonData.push({
+      date: forecastDate,
+      forecastValue: forecastValue,
+      observationValue: observationValue,
+      absoluteDifference: absoluteDifference,
+      isMissing: forecastValue === null || observationValue === null
+    });
+  });
+
+  return comparisonData.sort((a, b) => new Date(a.date) - new Date(b.date));
+}
+
+// Calculate statistics based on absolute differences
+// function calculateStatistics(comparisonData, parameter) {
+//   const totalDays = comparisonData.length;
+//   const missingDays = comparisonData.filter(item => item.isMissing).length;
+//   const validDays = totalDays - missingDays; // N
+  
+//   if (validDays === 0) {
+//     return {
+//       totalDays: totalDays,
+//       missingDays: missingDays,
+//       validDays: validDays,
+//       n1: 0, n2: 0, n3: 0, n11: 0,
+//       correct: 0,
+//       usable: 0,
+//       unusable: 0
+//     };
+//   }
+
+//   const validData = comparisonData.filter(item => !item.isMissing);
+  
+//   // Calculate N1, N11, N3, N2
+//   const n1 = validData.filter(item => item.absoluteDifference <= 0.1).length;
+//   const n11 = validData.filter(item => item.absoluteDifference > 0.1).length;
+//   const n3 = validData.filter(item => item.absoluteDifference > 2).length;
+//   const n2 = n11 - n3;
+
+//   // Calculate percentages based on parameter type
+//   let correct, usable, unusable;
+  
+//   if (parameter === 'wind_direction_deg' || parameter === 'wind_speed_kmph') {
+//     // For wind direction and wind speed
+//     correct = (n1 / validDays) * 100;
+//     usable = (n2 / validDays) * 100;
+//     unusable = (n11 / validDays) * 100;
+//   } else {
+//     // For all other parameters
+//     correct = (n1 / validDays) * 100;
+//     usable = (n2 / validDays) * 100;
+//     unusable = (n3 / validDays) * 100;
+//   }
+
+//   return {
+//     totalDays: totalDays,
+//     missingDays: missingDays,
+//     validDays: validDays,
+//     n1: n1,
+//     n2: n2,
+//     n3: n3,
+//     n11: n11,
+//     correct: correct,
+//     usable: usable,
+//     unusable: unusable
+//   };
+// }
+
+// Calculate statistics based on absolute differences
+function calculateStatistics(comparisonData, parameter) {
+    const totalDays = comparisonData.length;
+    const missingDays = comparisonData.filter(item => item.isMissing).length;
+    const validDays = totalDays - missingDays; // N
+    
+    if (validDays === 0) {
+      return {
+        totalDays: totalDays,
+        missingDays: missingDays,
+        validDays: validDays,
+        n1: 0, n2: 0, n3: 0, n11: 0,
+        correct: 0,
+        usable: 0,
+        unusable: 0
+      };
+    }
+  
+    const validData = comparisonData.filter(item => !item.isMissing);
+    
+    // Calculate N1, N11, N3, N2 based on correct thresholds
+    const n1 = validData.filter(item => item.absoluteDifference <= 1.0).length;  // Changed from 0.1 to 1.0
+    const n11 = validData.filter(item => item.absoluteDifference > 1.0).length;  // Changed from 0.1 to 1.0
+    const n3 = validData.filter(item => item.absoluteDifference > 2.0).length;   // This stays the same
+    const n2 = n11 - n3;
+  
+    // Calculate percentages
+    const correct = (n1 / validDays) * 100;
+    const usable = (n2 / validDays) * 100;
+    const unusable = (n3 / validDays) * 100;
+  
+    return {
+      totalDays: totalDays,
+      missingDays: missingDays,
+      validDays: validDays,
+      n1: n1,
+      n2: n2,
+      n3: n3,
+      n11: n11,
+      correct: correct,
+      usable: usable,
+      unusable: unusable
+    };
+  }
+
+
+// Display comparison results
+// function displayComparisonResults(comparisonData, statistics, day, district, parameter) {
+//   // Display statistics cards
+//   const statsDiv = document.getElementById('comparisonStats');
+//   statsDiv.innerHTML = `
+//     <div style="background: #d4edda; padding: 15px; border-radius: 10px; text-align: center;">
+//       <h4 style="color: #155724; margin: 0;">Correct</h4>
+//       <div style="font-size: 24px; font-weight: bold; color: #155724;">${statistics.correct.toFixed(1)}%</div>
+//       <small>(≤ 0.1 difference)</small>
+//     </div>
+//     <div style="background: #fff3cd; padding: 15px; border-radius: 10px; text-align: center;">
+//       <h4 style="color: #856404; margin: 0;">Usable</h4>
+//       <div style="font-size: 24px; font-weight: bold; color: #856404;">${statistics.usable.toFixed(1)}%</div>
+//       <small>(0.1 < diff ≤ 2)</small>
+//     </div>
+//     <div style="background: #f8d7da; padding: 15px; border-radius: 10px; text-align: center;">
+//       <h4 style="color: #721c24; margin: 0;">Unusable</h4>
+//       <div style="font-size: 24px; font-weight: bold; color: #721c24;">${statistics.unusable.toFixed(1)}%</div>
+//       <small>(> 2 difference)</small>
+//     </div>
+//     <div style="background: #d1ecf1; padding: 15px; border-radius: 10px; text-align: center;">
+//       <h4 style="color: #0c5460; margin: 0;">Valid Days</h4>
+//       <div style="font-size: 24px; font-weight: bold; color: #0c5460;">${statistics.validDays}</div>
+//       <small>out of ${statistics.totalDays}</small>
+//     </div>
+//   `;
+
+//   // Display detailed table
+//   const tableDiv = document.getElementById('comparisonTable');
+//   let tableHtml = `
+//     <h4>Detailed Comparison: ${district} - ${parameter} - ${day}</h4>
+//     <table>
+//       <thead>
+//         <tr>
+//           <th>Date</th>
+//           <th>Forecast Value</th>
+//           <th>Observation Value</th>
+//           <th>Absolute Difference</th>
+//           <th>Category</th>
+//         </tr>
+//       </thead>
+//       <tbody>`;
+
+//   comparisonData.forEach(item => {
+//     let category = 'Missing';
+//     let categoryStyle = 'background: #6c757d; color: white;';
+    
+//     if (!item.isMissing) {
+//       if (item.absoluteDifference <= 0.1) {
+//         category = 'Correct';
+//         categoryStyle = 'background: #28a745; color: white;';
+//       } else if (item.absoluteDifference <= 2) {
+//         category = 'Usable';
+//         categoryStyle = 'background: #ffc107; color: black;';
+//       } else {
+//         category = 'Unusable';
+//         categoryStyle = 'background: #dc3545; color: white;';
+//       }
+//     }
+
+//     tableHtml += `<tr>
+//       <td>${item.date}</td>
+//       <td>${formatComparisonValue(item.forecastValue)}</td>
+//       <td>${formatComparisonValue(item.observationValue)}</td>
+//       <td>${formatComparisonValue(item.absoluteDifference)}</td>
+//       <td><span style="${categoryStyle} padding: 4px 8px; border-radius: 15px; font-size: 12px; font-weight: bold;">${category}</span></td>
+//     </tr>`;
+//   });
+
+//   tableHtml += '</tbody></table>';
+//   tableDiv.innerHTML = tableHtml;
+// }
+
+// Display comparison results
+function displayComparisonResults(comparisonData, statistics, day, district, parameter) {
+    // Display statistics cards
+    const statsDiv = document.getElementById('comparisonStats');
+    statsDiv.innerHTML = `
+      <div style="background: #d4edda; padding: 15px; border-radius: 10px; text-align: center;">
+        <h4 style="color: #155724; margin: 0;">Correct</h4>
+        <div style="font-size: 24px; font-weight: bold; color: #155724;">${statistics.correct.toFixed(1)}%</div>
+        <small>(≤ 1.0 difference)</small>
+      </div>
+      <div style="background: #fff3cd; padding: 15px; border-radius: 10px; text-align: center;">
+        <h4 style="color: #856404; margin: 0;">Usable</h4>
+        <div style="font-size: 24px; font-weight: bold; color: #856404;">${statistics.usable.toFixed(1)}%</div>
+        <small>(1.0 < diff ≤ 2.0)</small>
+      </div>
+      <div style="background: #f8d7da; padding: 15px; border-radius: 10px; text-align: center;">
+        <h4 style="color: #721c24; margin: 0;">Unusable</h4>
+        <div style="font-size: 24px; font-weight: bold; color: #721c24;">${statistics.unusable.toFixed(1)}%</div>
+        <small>(> 2.0 difference)</small>
+      </div>
+      <div style="background: #d1ecf1; padding: 15px; border-radius: 10px; text-align: center;">
+        <h4 style="color: #0c5460; margin: 0;">Valid Days</h4>
+        <div style="font-size: 24px; font-weight: bold; color: #0c5460;">${statistics.validDays}</div>
+        <small>out of ${statistics.totalDays}</small>
+      </div>
+    `;
+  
+    // Display detailed table
+    const tableDiv = document.getElementById('comparisonTable');
+    let tableHtml = `
+      <h4>Detailed Comparison: ${district} - ${parameter} - ${day}</h4>
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Forecast Value</th>
+            <th>Observation Value</th>
+            <th>Absolute Difference</th>
+            <th>Category</th>
+          </tr>
+        </thead>
+        <tbody>`;
+  
+    comparisonData.forEach(item => {
+      let category = 'Missing';
+      let categoryStyle = 'background: #6c757d; color: white;';
+      
+      if (!item.isMissing) {
+        if (item.absoluteDifference <= 1.0) {  // Changed from 0.1 to 1.0
+          category = 'Correct';
+          categoryStyle = 'background: #28a745; color: white;';
+        } else if (item.absoluteDifference <= 2.0) {  // Changed from 2 to 2.0 for clarity
+          category = 'Usable';
+          categoryStyle = 'background: #ffc107; color: black;';
+        } else {
+          category = 'Unusable';
+          categoryStyle = 'background: #dc3545; color: white;';
+        }
+      }
+  
+      tableHtml += `<tr>
+        <td>${item.date}</td>
+        <td>${formatComparisonValue(item.forecastValue)}</td>
+        <td>${formatComparisonValue(item.observationValue)}</td>
+        <td>${formatComparisonValue(item.absoluteDifference)}</td>
+        <td><span style="${categoryStyle} padding: 4px 8px; border-radius: 15px; font-size: 12px; font-weight: bold;">${category}</span></td>
+      </tr>`;
+    });
+  
+    tableHtml += '</tbody></table>';
+    
+    // Add the statistics summary table after the main table
+    tableHtml += `
+      <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+        <h4>Statistical Summary</h4>
+        <table style="width: 100%; max-width: 600px;">
+          <tbody>
+            <tr>
+              <td><strong>Missing days (M)</strong></td>
+              <td style="text-align: right;"><strong>${statistics.missingDays}</strong></td>
+            </tr>
+            <tr>
+              <td><strong>Total no. of forecast days (N)</strong></td>
+              <td style="text-align: right;"><strong>${statistics.validDays}</strong></td>
+            </tr>
+            <tr>
+              <td><strong>No. of absolute values ≤ 1.0 (N1)</strong></td>
+              <td style="text-align: right;"><strong>${statistics.n1}</strong></td>
+            </tr>
+            <tr>
+              <td><strong>No. of absolute values > 1.0 (N11)</strong></td>
+              <td style="text-align: right;"><strong>${statistics.n11}</strong></td>
+            </tr>
+            <tr>
+              <td><strong>No. of absolute values > 2.0 (N3)</strong></td>
+              <td style="text-align: right;"><strong>${statistics.n3}</strong></td>
+            </tr>
+            <tr>
+              <td><strong>No. of absolute values 1.0 < diff ≤ 2.0 (N2)</strong></td>
+              <td style="text-align: right;"><strong>${statistics.n2}</strong></td>
+            </tr>
+            <tr style="border-top: 2px solid #dee2e6;">
+              <td><strong>Correct = (N1/N) × 100</strong></td>
+              <td style="text-align: right;"><strong>${statistics.correct.toFixed(2)}%</strong></td>
+            </tr>
+            <tr>
+              <td><strong>Usable = (N2/N) × 100</strong></td>
+              <td style="text-align: right;"><strong>${statistics.usable.toFixed(2)}%</strong></td>
+            </tr>
+            <tr>
+              <td><strong>Unusable = (N3/N) × 100</strong></td>
+              <td style="text-align: right;"><strong>${statistics.unusable.toFixed(2)}%</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    `;
+    
+    tableDiv.innerHTML = tableHtml;
+  }
+
+// Format values for comparison display
+function formatComparisonValue(value) {
+  if (value === null || value === undefined) {
+    return '<span style="color: #999; font-style: italic;">N/A</span>';
+  }
+  return typeof value === 'number' ? value.toFixed(2) : value;
+}
+
+// Export comparison results to Excel
+// function exportComparisonToExcel() {
+//   if (!comparisonResults || comparisonResults.data.length === 0) {
+//     showComparisonStatus('❌ No comparison results to export.', 'error');
+//     return;
+//   }
+
+//   try {
+//     const { data, statistics, metadata } = comparisonResults;
+    
+//     // Prepare data for export
+//     const exportData = data.map(item => ({
+//       'Date': item.date,
+//       'Forecast Value': item.forecastValue,
+//       'Observation Value': item.observationValue,
+//       'Absolute Difference': item.absoluteDifference,
+//       'Status': item.isMissing ? 'Missing' : 
+//                 item.absoluteDifference <= 0.1 ? 'Correct' :
+//                 item.absoluteDifference <= 2 ? 'Usable' : 'Unusable'
+//     }));
+
+//     // Add statistics summary
+//     const summaryData = [
+//       { 'Metric': 'Total Days', 'Value': statistics.totalDays },
+//       { 'Metric': 'Missing Days', 'Value': statistics.missingDays },
+//       { 'Metric': 'Valid Days', 'Value': statistics.validDays },
+//       { 'Metric': 'Correct (%)', 'Value': statistics.correct.toFixed(1) },
+//       { 'Metric': 'Usable (%)', 'Value': statistics.usable.toFixed(1) },
+//       { 'Metric': 'Unusable (%)', 'Value': statistics.unusable.toFixed(1) }
+//     ];
+
+//     // Create workbook
+//     const wb = XLSX.utils.book_new();
+    
+//     // Add detailed data sheet
+//     const ws1 = XLSX.utils.json_to_sheet(exportData);
+//     XLSX.utils.book_append_sheet(wb, ws1, 'Detailed Comparison');
+    
+//     // Add summary sheet
+//     const ws2 = XLSX.utils.json_to_sheet(summaryData);
+//     XLSX.utils.book_append_sheet(wb, ws2, 'Statistics Summary');
+
+//     // Generate filename
+//     const timestamp = new Date().toISOString().slice(0, 10);
+//     const filename = `Comparison_${metadata.district}_${metadata.parameter}_${metadata.day}_${timestamp}.xlsx`;
+
+//     // Save file
+//     XLSX.writeFile(wb, filename);
+    
+//     showComparisonStatus(`✅ Comparison results exported to ${filename}`, 'success');
+
+//   } catch (error) {
+//     console.error('Export error:', error);
+//     showComparisonStatus('❌ Error exporting comparison results: ' + error.message, 'error');
+//   }
+// }
+
+// Export comparison results to Excel
+function exportComparisonToExcel() {
+    if (!comparisonResults || comparisonResults.data.length === 0) {
+      showComparisonStatus('❌ No comparison results to export.', 'error');
+      return;
+    }
+  
+    try {
+      const { data, statistics, metadata } = comparisonResults;
+      
+      // Prepare data for export
+      const exportData = data.map(item => ({
+        'Date': item.date,
+        'Forecast Value': item.forecastValue,
+        'Observation Value': item.observationValue,
+        'Absolute Difference': item.absoluteDifference,
+        'Status': item.isMissing ? 'Missing' : 
+                  item.absoluteDifference <= 1.0 ? 'Correct' :  // Changed from 0.1 to 1.0
+                  item.absoluteDifference <= 2.0 ? 'Usable' : 'Unusable'  // Changed from 2 to 2.0
+      }));
+  
+      // Add statistics summary
+      const summaryData = [
+        { 'Metric': 'Total Days', 'Value': statistics.totalDays },
+        { 'Metric': 'Missing Days (M)', 'Value': statistics.missingDays },
+        { 'Metric': 'Valid Days (N)', 'Value': statistics.validDays },
+        { 'Metric': 'N1 (≤ 1.0)', 'Value': statistics.n1 },
+        { 'Metric': 'N11 (> 1.0)', 'Value': statistics.n11 },
+        { 'Metric': 'N2 (1.0 < diff ≤ 2.0)', 'Value': statistics.n2 },
+        { 'Metric': 'N3 (> 2.0)', 'Value': statistics.n3 },
+        { 'Metric': 'Correct (%)', 'Value': statistics.correct.toFixed(2) },
+        { 'Metric': 'Usable (%)', 'Value': statistics.usable.toFixed(2) },
+        { 'Metric': 'Unusable (%)', 'Value': statistics.unusable.toFixed(2) }
+      ];
+  
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      
+      // Add detailed data sheet
+      const ws1 = XLSX.utils.json_to_sheet(exportData);
+      XLSX.utils.book_append_sheet(wb, ws1, 'Detailed Comparison');
+      
+      // Add summary sheet
+      const ws2 = XLSX.utils.json_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(wb, ws2, 'Statistics Summary');
+  
+      // Generate filename
+      const timestamp = new Date().toISOString().slice(0, 10);
+      const filename = `Comparison_${metadata.district}_${metadata.parameter}_${metadata.day}_${timestamp}.xlsx`;
+  
+      // Save file
+      XLSX.writeFile(wb, filename);
+      
+      showComparisonStatus(`✅ Comparison results exported to ${filename}`, 'success');
+  
+    } catch (error) {
+      console.error('Export error:', error);
+      showComparisonStatus('❌ Error exporting comparison results: ' + error.message, 'error');
+    }
+  }
+
+// Show comparison status messages
+function showComparisonStatus(message, type) {
+  const statusDiv = document.getElementById('comparisonProcessingStatus');
+  
+  let className = 'status-message ';
+  switch (type) {
+    case 'success':
+      className += 'status-success';
+      break;
+    case 'error':
+      className += 'status-error';
+      break;
+    case 'info':
+    default:
+      className += 'status-info';
+      break;
+  }
+  
+  statusDiv.innerHTML = `<div class="${className}">${message}</div>`;
+  
+  // Auto-hide success/info messages after 5 seconds
+  if (type === 'success' || type === 'info') {
+    setTimeout(() => {
+      if (statusDiv.innerHTML.includes(message)) {
+        statusDiv.innerHTML = '';
+      }
+    }, 5000);
+  }
+}
   
