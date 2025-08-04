@@ -1656,59 +1656,7 @@ function createComparisonData(forecastData, observationData, parameter) {
 }
 
 // Calculate statistics based on absolute differences
-// function calculateStatistics(comparisonData, parameter) {
-//   const totalDays = comparisonData.length;
-//   const missingDays = comparisonData.filter(item => item.isMissing).length;
-//   const validDays = totalDays - missingDays; // N
-  
-//   if (validDays === 0) {
-//     return {
-//       totalDays: totalDays,
-//       missingDays: missingDays,
-//       validDays: validDays,
-//       n1: 0, n2: 0, n3: 0, n11: 0,
-//       correct: 0,
-//       usable: 0,
-//       unusable: 0
-//     };
-//   }
 
-//   const validData = comparisonData.filter(item => !item.isMissing);
-  
-//   // Calculate N1, N11, N3, N2
-//   const n1 = validData.filter(item => item.absoluteDifference <= 0.1).length;
-//   const n11 = validData.filter(item => item.absoluteDifference > 0.1).length;
-//   const n3 = validData.filter(item => item.absoluteDifference > 2).length;
-//   const n2 = n11 - n3;
-
-//   // Calculate percentages based on parameter type
-//   let correct, usable, unusable;
-  
-//   if (parameter === 'wind_direction_deg' || parameter === 'wind_speed_kmph') {
-//     // For wind direction and wind speed
-//     correct = (n1 / validDays) * 100;
-//     usable = (n2 / validDays) * 100;
-//     unusable = (n11 / validDays) * 100;
-//   } else {
-//     // For all other parameters
-//     correct = (n1 / validDays) * 100;
-//     usable = (n2 / validDays) * 100;
-//     unusable = (n3 / validDays) * 100;
-//   }
-
-//   return {
-//     totalDays: totalDays,
-//     missingDays: missingDays,
-//     validDays: validDays,
-//     n1: n1,
-//     n2: n2,
-//     n3: n3,
-//     n11: n11,
-//     correct: correct,
-//     usable: usable,
-//     unusable: unusable
-//   };
-// }
 
 // Calculate statistics based on absolute differences
 function calculateStatistics(comparisonData, parameter) {
@@ -1757,77 +1705,6 @@ function calculateStatistics(comparisonData, parameter) {
 
 
 // Display comparison results
-// function displayComparisonResults(comparisonData, statistics, day, district, parameter) {
-//   // Display statistics cards
-//   const statsDiv = document.getElementById('comparisonStats');
-//   statsDiv.innerHTML = `
-//     <div style="background: #d4edda; padding: 15px; border-radius: 10px; text-align: center;">
-//       <h4 style="color: #155724; margin: 0;">Correct</h4>
-//       <div style="font-size: 24px; font-weight: bold; color: #155724;">${statistics.correct.toFixed(1)}%</div>
-//       <small>(≤ 0.1 difference)</small>
-//     </div>
-//     <div style="background: #fff3cd; padding: 15px; border-radius: 10px; text-align: center;">
-//       <h4 style="color: #856404; margin: 0;">Usable</h4>
-//       <div style="font-size: 24px; font-weight: bold; color: #856404;">${statistics.usable.toFixed(1)}%</div>
-//       <small>(0.1 < diff ≤ 2)</small>
-//     </div>
-//     <div style="background: #f8d7da; padding: 15px; border-radius: 10px; text-align: center;">
-//       <h4 style="color: #721c24; margin: 0;">Unusable</h4>
-//       <div style="font-size: 24px; font-weight: bold; color: #721c24;">${statistics.unusable.toFixed(1)}%</div>
-//       <small>(> 2 difference)</small>
-//     </div>
-//     <div style="background: #d1ecf1; padding: 15px; border-radius: 10px; text-align: center;">
-//       <h4 style="color: #0c5460; margin: 0;">Valid Days</h4>
-//       <div style="font-size: 24px; font-weight: bold; color: #0c5460;">${statistics.validDays}</div>
-//       <small>out of ${statistics.totalDays}</small>
-//     </div>
-//   `;
-
-//   // Display detailed table
-//   const tableDiv = document.getElementById('comparisonTable');
-//   let tableHtml = `
-//     <h4>Detailed Comparison: ${district} - ${parameter} - ${day}</h4>
-//     <table>
-//       <thead>
-//         <tr>
-//           <th>Date</th>
-//           <th>Forecast Value</th>
-//           <th>Observation Value</th>
-//           <th>Absolute Difference</th>
-//           <th>Category</th>
-//         </tr>
-//       </thead>
-//       <tbody>`;
-
-//   comparisonData.forEach(item => {
-//     let category = 'Missing';
-//     let categoryStyle = 'background: #6c757d; color: white;';
-    
-//     if (!item.isMissing) {
-//       if (item.absoluteDifference <= 0.1) {
-//         category = 'Correct';
-//         categoryStyle = 'background: #28a745; color: white;';
-//       } else if (item.absoluteDifference <= 2) {
-//         category = 'Usable';
-//         categoryStyle = 'background: #ffc107; color: black;';
-//       } else {
-//         category = 'Unusable';
-//         categoryStyle = 'background: #dc3545; color: white;';
-//       }
-//     }
-
-//     tableHtml += `<tr>
-//       <td>${item.date}</td>
-//       <td>${formatComparisonValue(item.forecastValue)}</td>
-//       <td>${formatComparisonValue(item.observationValue)}</td>
-//       <td>${formatComparisonValue(item.absoluteDifference)}</td>
-//       <td><span style="${categoryStyle} padding: 4px 8px; border-radius: 15px; font-size: 12px; font-weight: bold;">${category}</span></td>
-//     </tr>`;
-//   });
-
-//   tableHtml += '</tbody></table>';
-//   tableDiv.innerHTML = tableHtml;
-// }
 
 // Display comparison results
 function displayComparisonResults(comparisonData, statistics, day, district, parameter) {
@@ -1959,61 +1836,7 @@ function formatComparisonValue(value) {
 }
 
 // Export comparison results to Excel
-// function exportComparisonToExcel() {
-//   if (!comparisonResults || comparisonResults.data.length === 0) {
-//     showComparisonStatus('❌ No comparison results to export.', 'error');
-//     return;
-//   }
 
-//   try {
-//     const { data, statistics, metadata } = comparisonResults;
-    
-//     // Prepare data for export
-//     const exportData = data.map(item => ({
-//       'Date': item.date,
-//       'Forecast Value': item.forecastValue,
-//       'Observation Value': item.observationValue,
-//       'Absolute Difference': item.absoluteDifference,
-//       'Status': item.isMissing ? 'Missing' : 
-//                 item.absoluteDifference <= 0.1 ? 'Correct' :
-//                 item.absoluteDifference <= 2 ? 'Usable' : 'Unusable'
-//     }));
-
-//     // Add statistics summary
-//     const summaryData = [
-//       { 'Metric': 'Total Days', 'Value': statistics.totalDays },
-//       { 'Metric': 'Missing Days', 'Value': statistics.missingDays },
-//       { 'Metric': 'Valid Days', 'Value': statistics.validDays },
-//       { 'Metric': 'Correct (%)', 'Value': statistics.correct.toFixed(1) },
-//       { 'Metric': 'Usable (%)', 'Value': statistics.usable.toFixed(1) },
-//       { 'Metric': 'Unusable (%)', 'Value': statistics.unusable.toFixed(1) }
-//     ];
-
-//     // Create workbook
-//     const wb = XLSX.utils.book_new();
-    
-//     // Add detailed data sheet
-//     const ws1 = XLSX.utils.json_to_sheet(exportData);
-//     XLSX.utils.book_append_sheet(wb, ws1, 'Detailed Comparison');
-    
-//     // Add summary sheet
-//     const ws2 = XLSX.utils.json_to_sheet(summaryData);
-//     XLSX.utils.book_append_sheet(wb, ws2, 'Statistics Summary');
-
-//     // Generate filename
-//     const timestamp = new Date().toISOString().slice(0, 10);
-//     const filename = `Comparison_${metadata.district}_${metadata.parameter}_${metadata.day}_${timestamp}.xlsx`;
-
-//     // Save file
-//     XLSX.writeFile(wb, filename);
-    
-//     showComparisonStatus(`✅ Comparison results exported to ${filename}`, 'success');
-
-//   } catch (error) {
-//     console.error('Export error:', error);
-//     showComparisonStatus('❌ Error exporting comparison results: ' + error.message, 'error');
-//   }
-// }
 
 // Export comparison results to Excel
 function exportComparisonToExcel() {
