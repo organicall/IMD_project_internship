@@ -2,15 +2,8 @@
     "redirects": [
       {
         "source": "/",
-        "destination": "/entry_page.html",
+        "destination": "/full.html",
         "permanent": true
-      }
-    ],
-
-    "rewrites": [
-      {
-        "source": "/verification",
-        "destination": "/verification.html"
       }
     ]
     

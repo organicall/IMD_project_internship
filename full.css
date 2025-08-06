@@ -1,0 +1,220 @@
+/* Base Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  html, body {
+    font-family: 'Segoe UI', sans-serif;
+  background-color: #f6f9fc;
+  color: #1e1e2f;
+  font-size: 14px;
+  margin: 0;
+
+  .container {
+    margin-top: 20px;
+  }
+  }
+  
+  /* Header */
+  header.header {
+    width: 100%;
+    background-color: #e1e4e5;
+    color: white;
+    padding: 20px 32px;
+    border-bottom: 1px solid #005fa3;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-sizing: border-box;
+  }
+  
+  
+  
+  header.header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+  }
+  
+  header.header nav a {
+    margin-right: 14px;
+    text-decoration: none;
+    color: #0077cc;
+    font-weight: 500;
+  }
+  
+  header.header nav a:hover {
+    text-decoration: underline;
+  }
+  
+  /* Layout Container */
+  .container {
+    width: 100%;
+    padding: 0 32px;
+    display: grid;
+    gap: 20px;
+    box-sizing: border-box;
+  }
+  
+  
+  /* Sections */
+  .section {
+    background-color: #ffffff;
+    border-left: 5px solid #ff6f3c;
+    border-radius: 6px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    padding: 16px 20px;
+    width: 100%;
+  }
+  
+  
+  /* Section Headings */
+  .section h2 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: #222;
+  }
+  
+  /* Form Groups */
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 10px;
+  }
+  
+  .form-group label {
+    font-weight: 500;
+    margin-bottom: 6px;
+  }
+  
+  input[type="file"],
+  input[type="text"],
+  select,
+  textarea {
+    padding: 8px 10px;
+    font-size: 14px;
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    background-color: #fff;
+  }
+  
+  textarea {
+    resize: vertical;
+    min-height: 60px;
+  }
+  
+  /* Buttons */
+  button.btn {
+    background-color: #2b64ba;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    margin: 4px 6px 4px 0;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+  }
+  
+  button.btn:hover {
+    background-color: #005fa3;
+  }
+  
+  button.btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }
+  
+  /* Filters */
+  .filter-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  
+  /* Result and Tables */
+  #result,
+  #comparisonTable,
+  #comprehensiveTable {
+    margin-top: 10px;
+    background-color: #ffffff;
+    border: 1px solid #ccc;
+    padding: 12px;
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+  }
+  
+  table th,
+  table td {
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    text-align: left;
+  }
+  
+  table th {
+    background-color: #f1f1f1;
+  }
+  
+  /* Cards for Comparison Stats */
+  #comparisonStats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+  }
+  
+  #comparisonStats > div {
+    background: #f9f9f9;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+  }
+  
+  /* Loading & Status */
+  .loading {
+    color: #555;
+    font-style: italic;
+    padding: 8px 0;
+  }
+  
+  #processingStatus,
+  #observationProcessingStatus,
+  #comparisonProcessingStatus,
+  #comprehensiveProcessingStatus {
+    margin-top: 10px;
+    font-weight: 500;
+  }
+  
+  #sheetNameValidation,
+  #observationSheetNameValidation {
+    font-size: 13px;
+    color: red;
+  }
+  
+  /* Responsive Cleanup */
+  @media (max-width: 768px) {
+    header.header {
+      align-items: flex-start;
+    }
+  
+    .filter-buttons {
+      flex-direction: column;
+    }
+  
+    .container {
+      padding: 12px;
+    }
+  }
+  
+
+  
