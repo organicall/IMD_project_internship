@@ -12,13 +12,9 @@
 <body>
   <!-- Header -->
   <header class="header">
-    <h1>🌤️ Weather Portal - Forecast Allocator</h1>
+    <h1 style="padding-bottom: 10px;" > Forecast Department - CWC Visakhapatnam </h1>
     <nav>
-      <a href="entry_page.html">Entry Page</a>
-      <a href="individual_tables.html">Individual Tables</a>
-      <a href="verification.html">Verification</a>
-      <a href="day-wise analysis.html">Daily Analysis</a>
-      <a href="full.html">Forecast Allocator</a>
+      <a href="full.html"> Analysis </a>
       <a href="about.html">About</a>
     </nav>
   </header>
@@ -26,7 +22,7 @@
   <div class="container">
     <!-- File Upload Section -->
     <div class="section">
-      <h2>📊 Upload Forecast Data</h2>
+      <h2>Upload Forecast Data</h2>
       <div class="form-group">
         <label for="fileInput">Select Forecast Excel File:</label>
         <input type="file" id="fileInput" accept=".xlsx,.xls">
@@ -49,9 +45,26 @@
       <div id="processingStatus"></div>
     </div>
 
+    <!-- Sheet Management Section for Forecast -->
+<div class="section">
+  <h2>📋 Manage Forecast Sheets</h2>
+  <button class="btn" onclick="toggleSheetList('forecast')" id="toggleForecastBtn">
+    📂 Show Uploaded Sheets (<span id="forecastSheetCount">0</span>)
+  </button>
+  
+  <div id="forecastSheetList" class="sheet-list" style="display: none;">
+    <div class="loading" id="forecastSheetLoading" style="display: none;">
+      Loading sheets...
+    </div>
+    <div id="forecastSheetContent">
+      <p style="color: #666; font-style: italic;">No sheets uploaded yet.</p>
+    </div>
+  </div>
+</div>
+
     <!-- Filter Section -->
     <div class="section" id="filterSection" style="display: none;">
-      <h2>🔍 Filter Results</h2>
+      <h2> Filter Results</h2>
       <div class="filter-buttons" id="filterButtons">
         <button class="btn" onclick="filterByDay('All')">Show All</button>
         <button class="btn" onclick="filterByDay('Day1')">Day 1</button>
@@ -64,9 +77,9 @@
 
     <!-- Results Section -->
     <div class="section" id="resultsSection" style="display: none;">
-      <h2>📈 Processed Forecast Data</h2>
+      <h2> Processed Forecast Data</h2>
       <div class="loading" id="loadingIndicator">
-        <div>🔄 Processing data...</div>
+        <div> Processing data...</div>
       </div>
       <div id="result"></div>
     </div>
@@ -78,7 +91,7 @@
 
   <!-- Replace your existing observation upload section with this complete section -->
 <div class="section">
-    <h2>📈 Upload Observation Data</h2>
+    <h2> Upload Observation Data</h2>
     
     <div class="form-group">
       <label for="observationFileInput">Select Observation Excel File:</label>
@@ -101,11 +114,28 @@
     
     <div id="observationProcessingStatus"></div>
 </div>
+
+<!-- Sheet Management Section for Observation -->
+<div class="section">
+  <h2>📋 Manage Observation Sheets</h2>
+  <button class="btn" onclick="toggleSheetList('observation')" id="toggleObservationBtn">
+    📂 Show Uploaded Sheets (<span id="observationSheetCount">0</span>)
+  </button>
+  
+  <div id="observationSheetList" class="sheet-list" style="display: none;">
+    <div class="loading" id="observationSheetLoading" style="display: none;">
+      Loading sheets...
+    </div>
+    <div id="observationSheetContent">
+      <p style="color: #666; font-style: italic;">No sheets uploaded yet.</p>
+    </div>
+  </div>
+</div>
   
 <!--new analysis portiion-->
 <!-- Add this section to your HTML file after the observation upload section -->
 <div class="section">
-    <h2>📊 Forecast vs Observation Comparison</h2>
+    <h2> Forecast vs Observation Comparison</h2>
     
     <div class="form-group">
         <label for="comparisonDay">Select Day:</label>

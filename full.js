@@ -18,6 +18,11 @@ let comparisonResults = [];
 // Global variable for comprehensive results
 let comprehensiveResults = [];
 
+let forecastSheets = [];
+let observationSheets = [];
+let currentlyDeleting = {};
+
+
 // Parameter names for display
 const parameterNames = {
   'rainfall': 'Rainfall',
@@ -31,111 +36,7 @@ const parameterNames = {
 };
 
 // Perform comprehensive analysis for all districts and parameters
-// async function performComprehensiveAnalysis() {
-//   const day = document.getElementById('comprehensiveDay').value;
-  
-//   if (!day) {
-//     showComprehensiveStatus('❌ Please select a day for analysis.', 'error');
-//     return;
-//   }
 
-//   if (processedOutput.length === 0) {
-//     showComprehensiveStatus('❌ No forecast data available. Please process forecast data first.', 'error');
-//     return;
-//   }
-
-//   if (processedObservationOutput.length === 0) {
-//     showComprehensiveStatus('❌ No observation data available. Please process observation data first.', 'error');
-//     return;
-//   }
-
-//   showComprehensiveStatus('🔍 Performing comprehensive analysis for all districts and parameters...', 'info');
-
-//   try {
-//     const dayNumber = parseInt(day.replace('Day', ''));
-//     const results = [];
-    
-//     // Get all unique districts
-//     const allDistricts = [...new Set(processedOutput.map(row => row.district_name))];
-//     const parameters = Object.keys(parameterNames);
-    
-//     // For each district, analyze all parameters
-//     for (const district of allDistricts) {
-//       const districtResult = {
-//         district: district,
-//         parameters: {}
-//       };
-      
-//       for (const parameter of parameters) {
-//         // Filter forecast data for this district and day
-//         const forecastData = processedOutput.filter(row => 
-//           row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
-//           row.day_number === dayNumber
-//         );
-
-//         // Filter observation data for this district and day
-//         const observationData = processedObservationOutput.filter(row => 
-//           row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
-//           row.day_number === dayNumber
-//         );
-
-//         if (forecastData.length > 0 && observationData.length > 0) {
-//           // Create comparison data for this parameter
-//           const comparisonData = createComparisonData(forecastData, observationData, parameter);
-//           const statistics = calculateStatistics(comparisonData, parameter);
-          
-//           districtResult.parameters[parameter] = {
-//             correct: statistics.correct,
-//             usable: statistics.usable,
-//             unusable: statistics.unusable,
-//             correctPlusUsable: statistics.correct + statistics.usable,
-//             validDays: statistics.validDays,
-//             missingDays: statistics.missingDays,
-//             n1: statistics.n1,
-//             n2: statistics.n2,
-//             n3: statistics.n3
-//           };
-//         } else {
-//           // No data available
-//           districtResult.parameters[parameter] = {
-//             correct: 0,
-//             usable: 0,
-//             unusable: 0,
-//             correctPlusUsable: 0,
-//             validDays: 0,
-//             missingDays: 0,
-//             n1: 0,
-//             n2: 0,
-//             n3: 0
-//           };
-//         }
-//       }
-      
-//       results.push(districtResult);
-//     }
-
-//     // Calculate state-wide averages
-//     const stateAverages = calculateStateAverages(results, parameters);
-    
-//     // Store results globally
-//     comprehensiveResults = {
-//       day: day,
-//       districts: results,
-//       stateAverages: stateAverages,
-//       parameters: parameters
-//     };
-
-//     // Display results
-//     displayComprehensiveResults(comprehensiveResults);
-    
-//     document.getElementById('comprehensiveResultsSection').style.display = 'block';
-//     showComprehensiveStatus(`✅ Comprehensive analysis completed for ${day}.`, 'success');
-
-//   } catch (error) {
-//     console.error('Comprehensive analysis error:', error);
-//     showComprehensiveStatus('❌ Comprehensive analysis error: ' + error.message, 'error');
-//   }
-// }
 
 // Updated performComprehensiveAnalysis function with parameter-specific thresholds
 async function performComprehensiveAnalysis() {
@@ -519,7 +420,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadExistingObservationSheetNames();
     setupEventListeners();
     setupObservationEventListeners();
-    populateComparisonDropdowns(); // ADD THIS LINE
+    populateComparisonDropdowns(); 
+    await loadSheetInformation();
 });
 
 // Setup event listeners
@@ -2295,3 +2197,426 @@ function showComparisonStatus(message, type) {
   }
 }
   
+
+
+async function loadSheetInformation() {
+  try {
+    // Load forecast sheet information
+    await loadForecastSheetInfo();
+    // Load observation sheet information  
+    await loadObservationSheetInfo();
+  } catch (error) {
+    console.error('Error loading sheet information:', error);
+  }
+}
+
+async function loadForecastSheetInfo() {
+  try {
+    const { data, error } = await client
+      .from('full_forecast')
+      .select('sheet_name, forecast_date, district_name')
+      .not('sheet_name', 'is', null)
+      .order('sheet_name', { ascending: true });
+    
+    if (error) throw error;
+    
+    // Group by sheet_name and calculate metadata
+    const sheetGroups = {};
+    data.forEach(row => {
+      if (!sheetGroups[row.sheet_name]) {
+        sheetGroups[row.sheet_name] = {
+          name: row.sheet_name,
+          records: 0,
+          districts: new Set(),
+          dates: new Set(),
+          uploadDate: null
+        };
+      }
+      
+      sheetGroups[row.sheet_name].records++;
+      sheetGroups[row.sheet_name].districts.add(row.district_name);
+      sheetGroups[row.sheet_name].dates.add(row.forecast_date);
+    });
+    
+    // Convert to array and add computed metadata
+    forecastSheets = Object.values(sheetGroups).map(sheet => ({
+      ...sheet,
+      districts: Array.from(sheet.districts),
+      dates: Array.from(sheet.dates).sort(),
+      districtCount: sheet.districts.size,
+      dateRange: sheet.dates.size > 0 ? {
+        start: Array.from(sheet.dates).sort()[0],
+        end: Array.from(sheet.dates).sort()[sheet.dates.size - 1]
+      } : null
+    }));
+    
+    updateForecastSheetDisplay();
+    
+  } catch (error) {
+    console.error('Error loading forecast sheet info:', error);
+  }
+}
+
+
+async function loadObservationSheetInfo() {
+  try {
+    const { data, error } = await client
+      .from('full_observation')
+      .select('sheet_name, observation_date, district_name')
+      .not('sheet_name', 'is', null)
+      .order('sheet_name', { ascending: true });
+    
+    if (error) throw error;
+    
+    // Group by sheet_name and calculate metadata
+    const sheetGroups = {};
+    data.forEach(row => {
+      if (!sheetGroups[row.sheet_name]) {
+        sheetGroups[row.sheet_name] = {
+          name: row.sheet_name,
+          records: 0,
+          districts: new Set(),
+          dates: new Set(),
+          uploadDate: null
+        };
+      }
+      
+      sheetGroups[row.sheet_name].records++;
+      sheetGroups[row.sheet_name].districts.add(row.district_name);
+      sheetGroups[row.sheet_name].dates.add(row.observation_date);
+    });
+    
+    // Convert to array and add computed metadata
+    observationSheets = Object.values(sheetGroups).map(sheet => ({
+      ...sheet,
+      districts: Array.from(sheet.districts),
+      dates: Array.from(sheet.dates).sort(),
+      districtCount: sheet.districts.size,
+      dateRange: sheet.dates.size > 0 ? {
+        start: Array.from(sheet.dates).sort()[0],
+        end: Array.from(sheet.dates).sort()[sheet.dates.size - 1]
+      } : null
+    }));
+    
+    updateObservationSheetDisplay();
+    
+  } catch (error) {
+    console.error('Error loading observation sheet info:', error);
+  }
+}
+
+function toggleSheetList(type) {
+  const listId = type === 'forecast' ? 'forecastSheetList' : 'observationSheetList';
+  const btnId = type === 'forecast' ? 'toggleForecastBtn' : 'toggleObservationBtn';
+  
+  const listElement = document.getElementById(listId);
+  const btnElement = document.getElementById(btnId);
+  
+  if (listElement.style.display === 'none') {
+    listElement.style.display = 'block';
+    btnElement.innerHTML = btnElement.innerHTML.replace('📂 Show', '📁 Hide');
+  } else {
+    listElement.style.display = 'none';
+    btnElement.innerHTML = btnElement.innerHTML.replace('📁 Hide', '📂 Show');
+  }
+}
+
+
+function updateForecastSheetDisplay() {
+  const contentDiv = document.getElementById('forecastSheetContent');
+  const countSpan = document.getElementById('forecastSheetCount');
+  
+  countSpan.textContent = forecastSheets.length;
+  
+  if (forecastSheets.length === 0) {
+    contentDiv.innerHTML = '<p style="color: #666; font-style: italic; padding: 15px;">No sheets uploaded yet.</p>';
+    return;
+  }
+  
+  let html = '';
+  forecastSheets.forEach(sheet => {
+    const dateRangeText = sheet.dateRange ? 
+      `${formatDate(new Date(sheet.dateRange.start))} to ${formatDate(new Date(sheet.dateRange.end))}` : 
+      'No dates';
+      
+    html += `
+      <div class="sheet-item">
+        <div class="sheet-info">
+          <div class="sheet-name">📊 ${sheet.name}</div>
+          <div class="sheet-meta">
+            ${sheet.records} records • ${sheet.districtCount} districts • ${dateRangeText}
+          </div>
+        </div>
+        <div class="sheet-actions">
+          <button class="btn-info" onclick="showSheetDetails('forecast', '${sheet.name}')">
+            ℹ️ Info
+          </button>
+          <button class="btn-delete" onclick="confirmDeleteSheet('forecast', '${sheet.name}')" 
+                  ${currentlyDeleting[`forecast_${sheet.name}`] ? 'disabled' : ''}>
+            ${currentlyDeleting[`forecast_${sheet.name}`] ? '⏳ Deleting...' : '🗑️ Delete'}
+          </button>
+        </div>
+      </div>
+    `;
+  });
+  
+  contentDiv.innerHTML = html;
+}
+
+
+function updateObservationSheetDisplay() {
+  const contentDiv = document.getElementById('observationSheetContent');
+  const countSpan = document.getElementById('observationSheetCount');
+  
+  countSpan.textContent = observationSheets.length;
+  
+  if (observationSheets.length === 0) {
+    contentDiv.innerHTML = '<p style="color: #666; font-style: italic; padding: 15px;">No sheets uploaded yet.</p>';
+    return;
+  }
+  
+  let html = '';
+  observationSheets.forEach(sheet => {
+    const dateRangeText = sheet.dateRange ? 
+      `${formatDate(new Date(sheet.dateRange.start))} to ${formatDate(new Date(sheet.dateRange.end))}` : 
+      'No dates';
+      
+    html += `
+      <div class="sheet-item">
+        <div class="sheet-info">
+          <div class="sheet-name">📈 ${sheet.name}</div>
+          <div class="sheet-meta">
+            ${sheet.records} records • ${sheet.districtCount} districts • ${dateRangeText}
+          </div>
+        </div>
+        <div class="sheet-actions">
+          <button class="btn-info" onclick="showSheetDetails('observation', '${sheet.name}')">
+            ℹ️ Info
+          </button>
+          <button class="btn-delete" onclick="confirmDeleteSheet('observation', '${sheet.name}')" 
+                  ${currentlyDeleting[`observation_${sheet.name}`] ? 'disabled' : ''}>
+            ${currentlyDeleting[`observation_${sheet.name}`] ? '⏳ Deleting...' : '🗑️ Delete'}
+          </button>
+        </div>
+      </div>
+    `;
+  });
+  
+  contentDiv.innerHTML = html;
+}
+
+// Show detailed sheet information
+function showSheetDetails(type, sheetName) {
+  const sheets = type === 'forecast' ? forecastSheets : observationSheets;
+  const sheet = sheets.find(s => s.name === sheetName);
+  
+  if (!sheet) {
+    alert('Sheet not found!');
+    return;
+  }
+  
+  const dateRangeText = sheet.dateRange ? 
+    `From: ${formatDate(new Date(sheet.dateRange.start))}\nTo: ${formatDate(new Date(sheet.dateRange.end))}` : 
+    'No dates available';
+  
+  const message = `
+Sheet: ${sheet.name}
+Type: ${type.charAt(0).toUpperCase() + type.slice(1)}
+
+📊 Statistics:
+• Total Records: ${sheet.records}
+• Districts: ${sheet.districtCount}
+• Date Range: ${sheet.dateRange ? `${sheet.dates.length} days` : 'No dates'}
+
+📅 Date Range:
+${dateRangeText}
+
+🏘️ Districts:
+${sheet.districts.join(', ')}
+  `;
+  
+  alert(message);
+}
+
+// Confirm sheet deletion
+function confirmDeleteSheet(type, sheetName) {
+  const message = `Are you sure you want to delete the sheet "${sheetName}" and all its associated ${type} data?\n\nThis action cannot be undone.`;
+  
+  if (confirm(message)) {
+    deleteSheet(type, sheetName);
+  }
+}
+
+// Delete sheet and all associated data
+async function deleteSheet(type, sheetName) {
+  const deleteKey = `${type}_${sheetName}`;
+  
+  // Prevent multiple simultaneous deletes
+  if (currentlyDeleting[deleteKey]) {
+    return;
+  }
+  
+  currentlyDeleting[deleteKey] = true;
+  
+  // Update UI to show deleting state
+  if (type === 'forecast') {
+    updateForecastSheetDisplay();
+  } else {
+    updateObservationSheetDisplay();
+  }
+  
+  try {
+    const tableName = type === 'forecast' ? 'full_forecast' : 'full_observation';
+    
+    // Delete all records with this sheet name
+    const { error } = await client
+      .from(tableName)
+      .delete()
+      .eq('sheet_name', sheetName);
+    
+    if (error) throw error;
+    
+    // Remove from local arrays
+    if (type === 'forecast') {
+      forecastSheets = forecastSheets.filter(s => s.name !== sheetName);
+      existingSheetNames = existingSheetNames.filter(name => name !== sheetName);
+      updateForecastSheetDisplay();
+    } else {
+      observationSheets = observationSheets.filter(s => s.name !== sheetName);
+      existingObservationSheetNames = existingObservationSheetNames.filter(name => name !== sheetName);
+      updateObservationSheetDisplay();
+    }
+    
+    // Show success message
+    const statusFunction = type === 'forecast' ? showStatus : showObservationStatus;
+    statusFunction(`✅ Successfully deleted sheet "${sheetName}" and all associated data.`, 'success');
+    
+  } catch (error) {
+    console.error(`Error deleting ${type} sheet:`, error);
+    const statusFunction = type === 'forecast' ? showStatus : showObservationStatus;
+    statusFunction(`❌ Error deleting sheet "${sheetName}": ${error.message}`, 'error');
+  } finally {
+    delete currentlyDeleting[deleteKey];
+    
+    // Update UI to remove deleting state
+    if (type === 'forecast') {
+      updateForecastSheetDisplay();
+    } else {
+      updateObservationSheetDisplay();
+    }
+  }
+}
+
+// Modify the existing saveToDatabase function to refresh the sheet list
+async function saveToDatabase() {
+  if (processedOutput.length === 0) {
+    showStatus('❌ No processed data to save.', 'error');
+    return;
+  }
+
+  if (!validateSheetName()) {
+    return;
+  }
+
+  const sheetName = document.getElementById('sheetNameInput').value.trim();
+  
+  try {
+    showStatus('💾 Saving data to database...', 'info');
+    
+    // Prepare data for database
+    const dbData = processedOutput.map(row => ({
+      day_number: row.day_number,
+      forecast_date: row.forecast_date,
+      district_name: row.district_name,
+      rainfall: row.rainfall,
+      temp_max_c: row.temp_max_c,
+      temp_min_c: row.temp_min_c,
+      humidity_1: row.humidity_1,
+      humidity_2: row.humidity_2,
+      wind_speed_kmph: row.wind_speed_kmph,
+      wind_direction_deg: row.wind_direction_deg,
+      cloud_cover_octa: row.cloud_cover_octa,
+      sheet_name: sheetName
+    }));
+
+    const { error } = await client
+      .from('full_forecast')
+      .insert(dbData);
+
+    if (error) {
+      throw error;
+    }
+
+    showStatus(`✅ Successfully saved ${dbData.length} records to database with sheet name "${sheetName}".`, 'success');
+    
+    // Update existing sheet names and disable save button
+    existingSheetNames.push(sheetName);
+    document.getElementById('saveToDatabaseBtn').disabled = true;
+    document.getElementById('sheetNameInput').value = '';
+    validateSheetName();
+
+    // NEW: Refresh sheet information
+    await loadForecastSheetInfo();
+
+  } catch (error) {
+    console.error('Database save error:', error);
+    showStatus('❌ Error saving to database: ' + error.message, 'error');
+  }
+}
+
+// Modify the existing saveObservationToDatabase function to refresh the sheet list
+async function saveObservationToDatabase() {
+    if (processedObservationOutput.length === 0) {
+      showObservationStatus('❌ No processed observation data to save.', 'error');
+      return;
+    }
+  
+    if (!validateObservationSheetName()) {
+      return;
+    }
+  
+    const sheetName = document.getElementById('observationSheetNameInput').value.trim();
+    
+    try {
+      showObservationStatus('💾 Saving observation data to database...', 'info');
+      
+      // Prepare data for database
+      const dbData = processedObservationOutput.map(row => ({
+        day_number: row.day_number,
+        observation_date: row.observation_date,
+        district_name: row.district_name,
+        rainfall: row.rainfall,
+        temp_max_c: row.temp_max_c,
+        temp_min_c: row.temp_min_c,
+        humidity_1: row.humidity_1,
+        humidity_2: row.humidity_2,
+        wind_speed_kmph: row.wind_speed_kmph,
+        wind_direction_deg: row.wind_direction_deg,
+        cloud_cover_octa: row.cloud_cover_octa,
+        sheet_name: sheetName
+      }));
+  
+      const { error } = await client
+        .from('full_observation')
+        .insert(dbData);
+  
+      if (error) {
+        throw error;
+      }
+  
+      showObservationStatus(`✅ Successfully saved ${dbData.length} observation records to database with sheet name "${sheetName}".`, 'success');
+      
+      // Update existing sheet names and disable save button
+      existingObservationSheetNames.push(sheetName);
+      document.getElementById('saveObservationToDatabaseBtn').disabled = true;
+      document.getElementById('observationSheetNameInput').value = '';
+      validateObservationSheetName();
+
+      // NEW: Refresh sheet information
+      await loadObservationSheetInfo();
+  
+    } catch (error) {
+      console.error('Database save error for observation:', error);
+      showObservationStatus('❌ Error saving observation to database: ' + error.message, 'error');
+    }
+}
