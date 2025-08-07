@@ -22,6 +22,9 @@ let forecastSheets = [];
 let observationSheets = [];
 let currentlyDeleting = {};
 
+let currentDisplayedData = [];
+let currentDisplayedObservationData = [];
+
 
 // Parameter names for display
 const parameterNames = {
@@ -881,6 +884,8 @@ const holidays = holidaysInput
     document.getElementById('filterSection').style.display = 'block';
     document.getElementById('resultsSection').style.display = 'block';
     //document.getElementById('verificationSection').style.display = 'block';
+    //document.getElementById('forecastExportSection').style.display = 'block';
+
     
     // Enable save button if sheet name is valid
     if (validateSheetName()) {
@@ -1112,21 +1117,39 @@ function filterObservationByDay(dayName) {
   }
 
 // Render table with processed data
+// Updated renderTable function with inline export buttons
 function renderTable(data) {
-  const resultDiv = document.getElementById('result');
+  currentDisplayedData = data; // Track what's currently displayed
+  
+  // Create a results section for forecast if it doesn't exist or update existing one
+  let forecastResultsSection = document.getElementById('resultsSection');
+  if (!forecastResultsSection) {
+    forecastResultsSection = document.createElement('div');
+    forecastResultsSection.id = 'resultsSection';
+    forecastResultsSection.className = 'section';
+    
+    // Insert after the filter section
+    const filterSection = document.getElementById('filterSection');
+    if (filterSection) {
+      filterSection.insertAdjacentElement('afterend', forecastResultsSection);
+    }
+  }
   
   if (data.length === 0) {
-    resultDiv.innerHTML = '<p>No data to display.</p>';
+    forecastResultsSection.innerHTML = `
+      <h2>📊 Processed Forecast Data</h2>
+      <p>No data to display.</p>
+    `;
     return;
   }
 
   let html = `
+    <h2>📊 Processed Forecast Data</h2>
     <div style="margin-bottom: 15px;">
       <strong>Total Records: ${data.length}</strong>
     </div>
     
     <div style="max-height: 500px; overflow: auto; border: 1px solid #ccc; border-radius: 8px;">
-
       <table>
         <thead>
           <tr>
@@ -1163,90 +1186,329 @@ function renderTable(data) {
     </tr>`;
   }
 
+  html += `</tbody></table></div>
+    
+    <!-- Export buttons for forecast -->
+    <div style="margin-top: 20px;" id="forecastExportButtons">
+      <h4 style="margin-bottom: 10px;">📁 Export Forecast Data</h4>
+      <div style="margin-bottom: 15px;">
+        <h5 style="margin-bottom: 10px;">Export Current View:</h5>
+        <button class="btn" onclick="exportCurrentForecastView()">📁 Export Current View</button>
+        <p style="font-size: 12px; color: #666; margin-top: 5px;">Exports whatever is currently displayed in the table above</p>
+      </div>
+      
+      <div>
+        <h5 style="margin-bottom: 10px;">Export Specific Days:</h5>
+        <button class="btn" onclick="exportForecastToExcel('All')">📁 Export All Days</button>
+        <button class="btn" onclick="exportForecastToExcel('Day1')">📁 Export Day 1</button>
+        <button class="btn" onclick="exportForecastToExcel('Day2')">📁 Export Day 2</button>
+        <button class="btn" onclick="exportForecastToExcel('Day3')">📁 Export Day 3</button>
+        <button class="btn" onclick="exportForecastToExcel('Day4')">📁 Export Day 4</button>
+        <button class="btn" onclick="exportForecastToExcel('Day5')">📁 Export Day 5</button>
+      </div>
+    </div>`;
+  
+  forecastResultsSection.innerHTML = html;
+  forecastResultsSection.style.display = 'block';
+}
+
+function renderObservationTable(data) {
+  currentDisplayedObservationData = data; // Track what's currently displayed
+  
+  // Create a results section for observation if it doesn't exist
+  let observationResultsSection = document.getElementById('observationResultsSection');
+  if (!observationResultsSection) {
+    observationResultsSection = document.createElement('div');
+    observationResultsSection.id = 'observationResultsSection';
+    observationResultsSection.className = 'section';
+    observationResultsSection.innerHTML = `
+      <h2>📈 Processed Observation Data</h2>
+      <div class="filter-buttons" id="observationFilterButtons">
+        <button class="btn" onclick="filterObservationByDay('All')">Show All</button>
+        <button class="btn" onclick="filterObservationByDay('Day1')">Day 1</button>
+        <button class="btn" onclick="filterObservationByDay('Day2')">Day 2</button>
+        <button class="btn" onclick="filterObservationByDay('Day3')">Day 3</button>
+        <button class="btn" onclick="filterObservationByDay('Day4')">Day 4</button>
+        <button class="btn" onclick="filterObservationByDay('Day5')">Day 5</button>
+      </div>
+      <div id="observationResult"></div>
+      <!-- Export buttons for observation -->
+      <div style="margin-top: 20px;" id="observationExportButtons">
+        <button class="btn" onclick="exportCurrentObservationView()">📁 Export Current View</button>
+        <button class="btn" onclick="exportObservationToExcel('All')">📁 Export All</button>
+        <button class="btn" onclick="exportObservationToExcel('Day1')">📁 Export Day 1</button>
+        <button class="btn" onclick="exportObservationToExcel('Day2')">📁 Export Day 2</button>
+        <button class="btn" onclick="exportObservationToExcel('Day3')">📁 Export Day 3</button>
+        <button class="btn" onclick="exportObservationToExcel('Day4')">📁 Export Day 4</button>
+        <button class="btn" onclick="exportObservationToExcel('Day5')">📁 Export Day 5</button>
+      </div>
+    `;
+    
+    // Insert after the observation upload section
+    const observationUploadSection = document.querySelector('.section:has(#observationFileInput)');
+    if (observationUploadSection) {
+      observationUploadSection.insertAdjacentElement('afterend', observationResultsSection);
+    }
+  }
+  
+  observationResultsSection.style.display = 'block';
+  const resultDiv = document.getElementById('observationResult');
+  
+  if (data.length === 0) {
+    resultDiv.innerHTML = '<p>No observation data to display.</p>';
+    return;
+  }
+
+  let html = `
+    <div style="margin-bottom: 15px;">
+      <strong>Total Observation Records: ${data.length}</strong>
+    </div>
+    <div style="max-height: 500px; overflow: auto; border: 1px solid #ccc; border-radius: 8px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Forecasted Date</th>
+            <th>Day</th>
+            <th>Forecast Taken On</th>
+            <th>District</th>
+            <th>Rainfall (mm)</th>
+            <th>Temp Max (°C)</th>
+            <th>Temp Min (°C)</th>
+            <th>Humidity Morning (%)</th>
+            <th>Humidity Evening (%)</th>
+            <th>Wind Speed (kmph)</th>
+            <th>Wind Direction (deg)</th>
+            <th>Cloud Cover (octa)</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+  for (let row of data) {
+    html += `<tr>
+      <td>${row.forecasted_date}</td>
+      <td><span style="background: linear-gradient(45deg, #28a745, #20c997); color: white; padding: 4px 8px; border-radius: 15px; font-size: 12px;">${row.day}</span></td>
+      <td>${row.forecast_taken_on}</td>
+      <td><strong>${row.district_name}</strong></td>
+      <td>${formatValue(row.rainfall)}</td>
+      <td>${formatValue(row.temp_max_c)}</td>
+      <td>${formatValue(row.temp_min_c)}</td>
+      <td>${formatValue(row.humidity_1)}</td>
+      <td>${formatValue(row.humidity_2)}</td>
+      <td>${formatValue(row.wind_speed_kmph)}</td>
+      <td>${formatValue(row.wind_direction_deg)}</td>
+      <td>${formatValue(row.cloud_cover_octa)}</td>
+    </tr>`;
+  }
+
   html += '</tbody></table></div>';
   resultDiv.innerHTML = html;
 }
 
-function renderObservationTable(data) {
-    // Create a results section for observation if it doesn't exist
-    let observationResultsSection = document.getElementById('observationResultsSection');
-    if (!observationResultsSection) {
-      observationResultsSection = document.createElement('div');
-      observationResultsSection.id = 'observationResultsSection';
-      observationResultsSection.className = 'section';
-      observationResultsSection.innerHTML = `
-        <h2>📈 Processed Observation Data</h2>
-        <div class="filter-buttons" id="observationFilterButtons">
-          <button class="btn" onclick="filterObservationByDay('All')">Show All</button>
-          <button class="btn" onclick="filterObservationByDay('Day1')">Day 1</button>
-          <button class="btn" onclick="filterObservationByDay('Day2')">Day 2</button>
-          <button class="btn" onclick="filterObservationByDay('Day3')">Day 3</button>
-          <button class="btn" onclick="filterObservationByDay('Day4')">Day 4</button>
-          <button class="btn" onclick="filterObservationByDay('Day5')">Day 5</button>
-        </div>
-        <div id="observationResult"></div>
-      `;
-      
-      // Insert after the observation upload section
-      const observationUploadSection = document.querySelector('.section:has(#observationFileInput)');
-      if (observationUploadSection) {
-        observationUploadSection.insertAdjacentElement('afterend', observationResultsSection);
-      }
+
+function exportCurrentForecastView() {
+  if (currentDisplayedData.length === 0) {
+    showStatus('❌ No data currently displayed to export.', 'error');
+    return;
+  }
+
+  try {
+    // Determine what's being displayed
+    const dayTypes = [...new Set(currentDisplayedData.map(row => row.day))];
+    const viewType = dayTypes.length === 1 ? dayTypes[0] : 'Filtered_View';
+    
+    const exportData = currentDisplayedData.map(row => ({
+      'Forecasted Date': row.forecasted_date,
+      'Day': row.day,
+      'Forecast Taken On': row.forecast_taken_on,
+      'District': row.district_name,
+      'Rainfall (mm)': row.rainfall,
+      'Temp Max (°C)': row.temp_max_c,
+      'Temp Min (°C)': row.temp_min_c,
+      'Humidity Morning (%)': row.humidity_1,
+      'Humidity Evening (%)': row.humidity_2,
+      'Wind Speed (kmph)': row.wind_speed_kmph,
+      'Wind Direction (deg)': row.wind_direction_deg,
+      'Cloud Cover (octa)': row.cloud_cover_octa
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    
+    // Auto-size columns
+    const cols = Object.keys(exportData[0]).map(key => ({ width: 15 }));
+    ws['!cols'] = cols;
+    
+    XLSX.utils.book_append_sheet(wb, ws, viewType);
+
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const filename = `Forecast_${viewType}_${timestamp}.xlsx`;
+
+    XLSX.writeFile(wb, filename);
+    showStatus(`✅ Current view exported to ${filename}`, 'success');
+
+  } catch (error) {
+    console.error('Export error:', error);
+    showStatus('❌ Error exporting current view: ' + error.message, 'error');
+  }
+}
+
+// Export current view for observation data
+function exportCurrentObservationView() {
+  if (currentDisplayedObservationData.length === 0) {
+    showObservationStatus('❌ No observation data currently displayed to export.', 'error');
+    return;
+  }
+
+  try {
+    // Determine what's being displayed
+    const dayTypes = [...new Set(currentDisplayedObservationData.map(row => row.day))];
+    const viewType = dayTypes.length === 1 ? dayTypes[0] : 'Filtered_View';
+    
+    const exportData = currentDisplayedObservationData.map(row => ({
+      'Forecasted Date': row.forecasted_date,
+      'Day': row.day,
+      'Forecast Taken On': row.forecast_taken_on,
+      'District': row.district_name,
+      'Rainfall (mm)': row.rainfall,
+      'Temp Max (°C)': row.temp_max_c,
+      'Temp Min (°C)': row.temp_min_c,
+      'Humidity Morning (%)': row.humidity_1,
+      'Humidity Evening (%)': row.humidity_2,
+      'Wind Speed (kmph)': row.wind_speed_kmph,
+      'Wind Direction (deg)': row.wind_direction_deg,
+      'Cloud Cover (octa)': row.cloud_cover_octa
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    
+    // Auto-size columns
+    const cols = Object.keys(exportData[0]).map(key => ({ width: 15 }));
+    ws['!cols'] = cols;
+    
+    XLSX.utils.book_append_sheet(wb, ws, viewType);
+
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const filename = `Observation_${viewType}_${timestamp}.xlsx`;
+
+    XLSX.writeFile(wb, filename);
+    showObservationStatus(`✅ Current view exported to ${filename}`, 'success');
+
+  } catch (error) {
+    console.error('Export error:', error);
+    showObservationStatus('❌ Error exporting current view: ' + error.message, 'error');
+  }
+}
+
+function exportForecastToExcel(dayFilter) {
+  if (processedOutput.length === 0) {
+    showStatus('❌ No forecast data to export.', 'error');
+    return;
+  }
+
+  try {
+    let dataToExport = processedOutput;
+    
+    if (dayFilter !== 'All') {
+      dataToExport = processedOutput.filter(row => row.day === dayFilter);
     }
-    
-    observationResultsSection.style.display = 'block';
-    const resultDiv = document.getElementById('observationResult');
-    
-    if (data.length === 0) {
-      resultDiv.innerHTML = '<p>No observation data to display.</p>';
+
+    if (dataToExport.length === 0) {
+      showStatus(`❌ No data found for ${dayFilter}.`, 'error');
       return;
     }
-  
-    let html = `
-      <div style="margin-bottom: 15px;">
-        <strong>Total Observation Records: ${data.length}</strong>
-      </div>
-      <div style="max-height: 500px; overflow: auto; border: 1px solid #ccc; border-radius: 8px;">
 
-        <table>
-          <thead>
-            <tr>
-              <th>Forecasted Date</th>
-              <th>Day</th>
-              <th>Forecast Taken On</th>
-              <th>District</th>
-              <th>Rainfall (mm)</th>
-              <th>Temp Max (°C)</th>
-              <th>Temp Min (°C)</th>
-              <th>Humidity Morning (%)</th>
-              <th>Humidity Evening (%)</th>
-              <th>Wind Speed (kmph)</th>
-              <th>Wind Direction (deg)</th>
-              <th>Cloud Cover (octa)</th>
-            </tr>
-          </thead>
-          <tbody>`;
-  
-    for (let row of data) {
-      html += `<tr>
-        <td>${row.forecasted_date}</td>
-        <td><span style="background: linear-gradient(45deg, #28a745, #20c997); color: white; padding: 4px 8px; border-radius: 15px; font-size: 12px;">${row.day}</span></td>
-        <td>${row.forecast_taken_on}</td>
-        <td><strong>${row.district_name}</strong></td>
-        <td>${formatValue(row.rainfall)}</td>
-        <td>${formatValue(row.temp_max_c)}</td>
-        <td>${formatValue(row.temp_min_c)}</td>
-        <td>${formatValue(row.humidity_1)}</td>
-        <td>${formatValue(row.humidity_2)}</td>
-        <td>${formatValue(row.wind_speed_kmph)}</td>
-        <td>${formatValue(row.wind_direction_deg)}</td>
-        <td>${formatValue(row.cloud_cover_octa)}</td>
-      </tr>`;
-    }
-  
-    html += '</tbody></table></div>';
-    resultDiv.innerHTML = html;
+    const exportData = dataToExport.map(row => ({
+      'Forecasted Date': row.forecasted_date,
+      'Day': row.day,
+      'Forecast Taken On': row.forecast_taken_on,
+      'District': row.district_name,
+      'Rainfall (mm)': row.rainfall,
+      'Temp Max (°C)': row.temp_max_c,
+      'Temp Min (°C)': row.temp_min_c,
+      'Humidity Morning (%)': row.humidity_1,
+      'Humidity Evening (%)': row.humidity_2,
+      'Wind Speed (kmph)': row.wind_speed_kmph,
+      'Wind Direction (deg)': row.wind_direction_deg,
+      'Cloud Cover (octa)': row.cloud_cover_octa
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    
+    // Auto-size columns
+    const cols = Object.keys(exportData[0]).map(key => ({ width: 15 }));
+    ws['!cols'] = cols;
+    
+    XLSX.utils.book_append_sheet(wb, ws, dayFilter);
+
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const filename = `Forecast_${dayFilter}_${timestamp}.xlsx`;
+
+    XLSX.writeFile(wb, filename);
+    showStatus(`✅ Forecast data exported to ${filename}`, 'success');
+
+  } catch (error) {
+    console.error('Export error:', error);
+    showStatus('❌ Error exporting forecast data: ' + error.message, 'error');
   }
+}
+
+// New function for exporting observation data
+function exportObservationToExcel(dayFilter) {
+  if (processedObservationOutput.length === 0) {
+    showObservationStatus('❌ No observation data to export.', 'error');
+    return;
+  }
+
+  try {
+    let dataToExport = processedObservationOutput;
+    
+    if (dayFilter !== 'All') {
+      dataToExport = processedObservationOutput.filter(row => row.day === dayFilter);
+    }
+
+    if (dataToExport.length === 0) {
+      showObservationStatus(`❌ No data found for ${dayFilter}.`, 'error');
+      return;
+    }
+
+    const exportData = dataToExport.map(row => ({
+      'Forecasted Date': row.forecasted_date,
+      'Day': row.day,
+      'Forecast Taken On': row.forecast_taken_on,
+      'District': row.district_name,
+      'Rainfall (mm)': row.rainfall,
+      'Temp Max (°C)': row.temp_max_c,
+      'Temp Min (°C)': row.temp_min_c,
+      'Humidity Morning (%)': row.humidity_1,
+      'Humidity Evening (%)': row.humidity_2,
+      'Wind Speed (kmph)': row.wind_speed_kmph,
+      'Wind Direction (deg)': row.wind_direction_deg,
+      'Cloud Cover (octa)': row.cloud_cover_octa
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    
+    // Auto-size columns
+    const cols = Object.keys(exportData[0]).map(key => ({ width: 15 }));
+    ws['!cols'] = cols;
+    
+    XLSX.utils.book_append_sheet(wb, ws, dayFilter);
+
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const filename = `Observation_${dayFilter}_${timestamp}.xlsx`;
+
+    XLSX.writeFile(wb, filename);
+    showObservationStatus(`✅ Observation data exported to ${filename}`, 'success');
+
+  } catch (error) {
+    console.error('Export error:', error);
+    showObservationStatus('❌ Error exporting observation data: ' + error.message, 'error');
+  }
+}
+
 
 // Format value for display
 function formatValue(value) {
