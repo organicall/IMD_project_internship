@@ -10,7 +10,6 @@
     
 </head>
 <body>
-  <!-- Header -->
   <header class="header">
     <h1 style="padding-bottom: 10px;" > Forecast Department - CWC Visakhapatnam </h1>
     <nav>
@@ -20,7 +19,6 @@
   </header>
 
   <div class="container">
-    <!-- File Upload Section -->
     <div class="section">
       <h2>Upload Forecast Data</h2>
       <div class="form-group">
@@ -45,7 +43,6 @@
       <div id="processingStatus"></div>
     </div>
 
-    <!-- Sheet Management Section for Forecast -->
 <div class="section">
   <h2>📋 Manage Forecast Sheets</h2>
   <button class="btn" onclick="toggleSheetList('forecast')" id="toggleForecastBtn">
@@ -61,8 +58,6 @@
     </div>
   </div>
 </div>
-
-    <!-- Filter Section -->
     <div class="section" id="filterSection" style="display: none;">
       <h2> Filter Results</h2>
       <div class="filter-buttons" id="filterButtons">
@@ -75,17 +70,14 @@
       </div>
     </div>
 
-    <!-- Results Section -->
     <div class="section" id="resultsSection" style="display: none;">
       <h2> Processed Forecast Data</h2>
       <div class="loading" id="loadingIndicator">
-        <!-- <div> Processing data...</div> -->
       </div>
       <div id="result"></div>
     </div>
     
 
-  <!-- Replace your existing observation upload section with this complete section -->
 <div class="section">
     <h2> Upload Observation Data</h2>
     
@@ -111,7 +103,6 @@
     <div id="observationProcessingStatus"></div>
 </div>
 
-<!-- Sheet Management Section for Observation -->
 <div class="section">
   <h2>📋 Manage Observation Sheets</h2>
   <button class="btn" onclick="toggleSheetList('observation')" id="toggleObservationBtn">
@@ -128,8 +119,7 @@
   </div>
 </div>
   
-<!--new analysis portiion-->
-<!-- Add this section to your HTML file after the observation upload section -->
+
 <div class="section">
     <h2> Forecast vs Observation Comparison</h2>
     
@@ -149,7 +139,6 @@
         <label for="comparisonDistrict">Select District:</label>
         <select id="comparisonDistrict">
             <option value="">-- Select District --</option>
-            <!-- Districts will be populated by JavaScript -->
         </select>
     </div>
     
@@ -173,26 +162,19 @@
     <div id="comparisonProcessingStatus"></div>
 </div>
 
-<!-- Results Section for Comparison -->
 <div class="section" id="comparisonResultsSection" style="display: none;">
     <h2>📈 Comparison Analysis Results</h2>
     
-    <!-- Statistics Cards -->
     <div id="comparisonStats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;"></div>
     
-    <!-- Detailed Table -->
     <div id="comparisonTable" style="max-height: 600px; overflow: auto; border: 1px solid #ccc; border-radius: 8px;"></div>
     
-    <!-- Export Button -->
     <div style="margin-top: 20px;">
         <button class="btn" onclick="exportComparisonToExcel()">📁 Export Comparison Results</button>
     </div>
 </div>
 
-<!--day based comparison-->
-<!-- Add this HTML section after the existing comparison section in your HTML file -->
 
-<!-- Comprehensive Analysis Section -->
 <div class="section">
   <h2>📊 Comprehensive Analysis - All Districts & Parameters</h2>
   
@@ -213,17 +195,13 @@
   <div id="comprehensiveProcessingStatus"></div>
 </div>
 
-<!-- Comprehensive Results Section -->
 <div class="section" id="comprehensiveResultsSection" style="display: none;">
   <h2>📈 Comprehensive Analysis Results</h2>
   
-  <!-- Summary -->
   <div id="comprehensiveSummary"></div>
   
-  <!-- Comprehensive Table -->
   <div id="comprehensiveTable" style="max-height: 600px; overflow: auto; border: 1px solid #ccc; border-radius: 8px;"></div>
   
-  <!-- Export Button -->
   <div style="margin-top: 20px;">
       <button class="btn" onclick="exportComprehensiveToExcel()">📁 Export Comprehensive Analysis</button>
   </div>
