@@ -118,6 +118,8 @@
             <option value="">-- Select District --</option>
         </select>
     </div>
+    
+    
     <div class="form-group">
         <label for="comparisonParameter">Select Parameter:</label>
         <select id="comparisonParameter">
@@ -145,6 +147,27 @@
           <input type="checkbox" id="useDateRangeComparison" />
           Use Date Range (if unchecked, uses processed data from above)
       </label>
+  </div>
+  <div class="input-group">
+    <label>
+      <input type="checkbox" id="useSpecificSheetsComparison" onchange="toggleSheetSelection('comparison')"> 
+      Use Specific Sheets (otherwise uses all data)
+    </label>
+  </div>
+  
+  <div id="sheetSelectionComparison" style="display: none;">
+    <div class="input-group">
+      <label for="forecastSheetSelection">Select Forecast Sheet:</label>
+      <select id="forecastSheetSelection">
+        <option value="">-- Select Forecast Sheet --</option>
+      </select>
+    </div>
+    <div class="input-group">
+      <label for="observationSheetSelection">Select Observation Sheet:</label>
+      <select id="observationSheetSelection">
+        <option value="">-- Select Observation Sheet --</option>
+      </select>
+    </div>
   </div>
     <button class="btn" onclick="performComparison()">🔍 Analyze Comparison</button>
     <div id="comparisonProcessingStatus"></div>
@@ -184,6 +207,29 @@
             Use Date Range (if unchecked, uses processed data from above)
         </label>
     </div>
+
+    <div class="input-group">
+      <label>
+        <input type="checkbox" id="useSpecificSheetsComprehensive" onchange="toggleSheetSelection('comprehensive')"> 
+        Use Specific Sheets (otherwise uses all data)
+      </label>
+    </div>
+    
+    <div id="sheetSelectionComprehensive" style="display: none;">
+      <div class="input-group">
+        <label for="forecastSheetSelectionComp">Select Forecast Sheet:</label>
+        <select id="forecastSheetSelectionComp">
+          <option value="">-- Select Forecast Sheet --</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label for="observationSheetSelectionComp">Select Observation Sheet:</label>
+        <select id="observationSheetSelectionComp">
+          <option value="">-- Select Observation Sheet --</option>
+        </select>
+      </div>
+    </div>
+    
   </div>
   <button class="btn" onclick="performComprehensiveAnalysis()">🔍 Generate Comprehensive Report</button>
   <div id="comprehensiveProcessingStatus"></div>
