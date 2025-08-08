@@ -1805,53 +1805,91 @@ function showObservationStatus(message, type) {
     }
   }
 
-
-  async function performComparison() {
+async function performComparison() {
   const day = document.getElementById('comparisonDay').value;
   const district = document.getElementById('comparisonDistrict').value;
   const parameter = document.getElementById('comparisonParameter').value;
+  const useDateRange = document.getElementById('useDateRangeComparison').checked;
+  const startDate = document.getElementById('comparisonStartDate').value;
+  const endDate = document.getElementById('comparisonEndDate').value;
   
   if (!day || !district || !parameter) {
     showComparisonStatus('❌ Please select day, district, and parameter for comparison.', 'error');
     return;
   }
 
-  if (processedOutput.length === 0) {
-    showComparisonStatus('❌ No forecast data available. Please process forecast data first.', 'error');
+  let forecastData, observationData;
+
+  if (useDateRange) {
+    // Validate date range
+    const validation = validateDateRange(startDate, endDate);
+    if (!validation.valid) {
+      showComparisonStatus('❌ ' + validation.message, 'error');
+      return;
+    }
+
+    showComparisonStatus('🔍 Loading data from database for date range...', 'info');
+
+    try {
+      // Load data from database
+      const [dbForecastData, dbObservationData] = await Promise.all([
+        loadForecastDataByDateRange(startDate, endDate),
+        loadObservationDataByDateRange(startDate, endDate)
+      ]);
+
+      // Filter by district and day
+      const dayNumber = parseInt(day.replace('Day', ''));
+      forecastData = dbForecastData.filter(row => 
+        row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
+        row.day_number === dayNumber
+      );
+
+      observationData = dbObservationData.filter(row => 
+        row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
+        row.day_number === dayNumber
+      );
+
+    } catch (error) {
+      showComparisonStatus('❌ Error loading data from database: ' + error.message, 'error');
+      return;
+    }
+  } else {
+    // Use existing processed data
+    if (processedOutput.length === 0) {
+      showComparisonStatus('❌ No forecast data available. Please process forecast data first.', 'error');
+      return;
+    }
+
+    if (processedObservationOutput.length === 0) {
+      showComparisonStatus('❌ No observation data available. Please process observation data first.', 'error');
+      return;
+    }
+
+    const dayNumber = parseInt(day.replace('Day', ''));
+    forecastData = processedOutput.filter(row => 
+      row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
+      row.day_number === dayNumber
+    );
+
+    observationData = processedObservationOutput.filter(row => 
+      row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
+      row.day_number === dayNumber
+    );
+  }
+
+  if (forecastData.length === 0) {
+    showComparisonStatus('❌ No forecast data found for the selected criteria.', 'error');
     return;
   }
 
-  if (processedObservationOutput.length === 0) {
-    showComparisonStatus('❌ No observation data available. Please process observation data first.', 'error');
+  if (observationData.length === 0) {
+    showComparisonStatus('❌ No observation data found for the selected criteria.', 'error');
     return;
   }
 
   showComparisonStatus('🔍 Performing comparison analysis...', 'info');
 
   try {
-    // Filter forecast data
-    const dayNumber = parseInt(day.replace('Day', ''));
-    const forecastData = processedOutput.filter(row => 
-      row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
-      row.day_number === dayNumber
-    );
-
-    // Filter observation data
-    const observationData = processedObservationOutput.filter(row => 
-      row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
-      row.day_number === dayNumber
-    );
-
-    if (forecastData.length === 0) {
-      showComparisonStatus('❌ No forecast data found for the selected criteria.', 'error');
-      return;
-    }
-
-    if (observationData.length === 0) {
-      showComparisonStatus('❌ No observation data found for the selected criteria.', 'error');
-      return;
-    }
-
     // Create comparison results
     const comparisonData = createComparisonData(forecastData, observationData, parameter);
     const statistics = calculateStatistics(comparisonData, parameter);
@@ -1863,7 +1901,10 @@ function showObservationStatus(message, type) {
       metadata: {
         day: day,
         district: district,
-        parameter: parameter
+        parameter: parameter,
+        useDateRange: useDateRange,
+        startDate: startDate,
+        endDate: endDate
       }
     };
 
@@ -1871,7 +1912,9 @@ function showObservationStatus(message, type) {
     displayComparisonResults(comparisonData, statistics, day, district, parameter);
     
     document.getElementById('comparisonResultsSection').style.display = 'block';
-    showComparisonStatus(`✅ Comparison analysis completed for ${district} - ${parameter} - ${day}.`, 'success');
+    
+    const dateRangeText = useDateRange ? ` (${startDate} to ${endDate})` : '';
+    showComparisonStatus(`✅ Comparison analysis completed for ${district} - ${parameter} - ${day}${dateRangeText}.`, 'success');
 
   } catch (error) {
     console.error('Comparison error:', error);
@@ -1879,14 +1922,15 @@ function showObservationStatus(message, type) {
   }
 }
 
-// Create comparison data by matching dates
+
+
 function createComparisonData(forecastData, observationData, parameter) {
   const comparisonData = [];
   
   // Create a lookup for observation data
   const obsLookup = {};
   observationData.forEach(obs => {
-    const dateKey = obs.observation_date || obs.forecasted_date;
+    const dateKey = obs.observation_date || obs.forecasted_date || obs.forecast_date;
     obsLookup[dateKey] = obs[parameter];
   });
 
@@ -2440,22 +2484,56 @@ function displayComparisonResults(comparisonData, statistics, day, district, par
   tableDiv.innerHTML = tableHtml;
 }
 
-function performComprehensiveAnalysis() {
+
+
+async function performComprehensiveAnalysis() {
   const day = document.getElementById('comprehensiveDay').value;
+  const useDateRange = document.getElementById('useDateRangeComprehensive').checked;
+  const startDate = document.getElementById('comprehensiveStartDate').value;
+  const endDate = document.getElementById('comprehensiveEndDate').value;
   
   if (!day) {
     showComprehensiveStatus('❌ Please select a day for analysis.', 'error');
     return;
   }
 
-  if (processedOutput.length === 0) {
-    showComprehensiveStatus('❌ No forecast data available. Please process forecast data first.', 'error');
-    return;
-  }
+  let allForecastData, allObservationData;
 
-  if (processedObservationOutput.length === 0) {
-    showComprehensiveStatus('❌ No observation data available. Please process observation data first.', 'error');
-    return;
+  if (useDateRange) {
+    // Validate date range
+    const validation = validateDateRange(startDate, endDate);
+    if (!validation.valid) {
+      showComprehensiveStatus('❌ ' + validation.message, 'error');
+      return;
+    }
+
+    showComprehensiveStatus('🔍 Loading data from database for date range...', 'info');
+
+    try {
+      // Load data from database
+      [allForecastData, allObservationData] = await Promise.all([
+        loadForecastDataByDateRange(startDate, endDate),
+        loadObservationDataByDateRange(startDate, endDate)
+      ]);
+
+    } catch (error) {
+      showComprehensiveStatus('❌ Error loading data from database: ' + error.message, 'error');
+      return;
+    }
+  } else {
+    // Use existing processed data
+    if (processedOutput.length === 0) {
+      showComprehensiveStatus('❌ No forecast data available. Please process forecast data first.', 'error');
+      return;
+    }
+
+    if (processedObservationOutput.length === 0) {
+      showComprehensiveStatus('❌ No observation data available. Please process observation data first.', 'error');
+      return;
+    }
+
+    allForecastData = processedOutput;
+    allObservationData = processedObservationOutput;
   }
 
   showComprehensiveStatus('🔍 Performing comprehensive analysis for all districts and parameters...', 'info');
@@ -2464,9 +2542,11 @@ function performComprehensiveAnalysis() {
     const dayNumber = parseInt(day.replace('Day', ''));
     const results = [];
     
-    const allDistricts = [...new Set(processedOutput.map(row => row.district_name))];
+    // Get all unique districts from the data
+    const allDistricts = [...new Set(allForecastData.map(row => row.district_name))];
     const parameters = Object.keys(parameterNames);
     
+    // For each district, analyze all parameters
     for (const district of allDistricts) {
       const districtResult = {
         district: district,
@@ -2474,53 +2554,57 @@ function performComprehensiveAnalysis() {
       };
       
       for (const parameter of parameters) {
-        const forecastData = processedOutput.filter(row => 
+        // Filter forecast data for this district and day
+        const forecastData = allForecastData.filter(row => 
           row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
           row.day_number === dayNumber
         );
 
-        const observationData = processedObservationOutput.filter(row => 
+        // Filter observation data for this district and day
+        const observationData = allObservationData.filter(row => 
           row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
           row.day_number === dayNumber
         );
 
         if (forecastData.length > 0 && observationData.length > 0) {
+          // Create comparison data for this parameter
           const comparisonData = createComparisonData(forecastData, observationData, parameter);
           const statistics = calculateStatistics(comparisonData, parameter);
           
           if (statistics.isRainfall) {
-              districtResult.parameters[parameter] = {
-                correct: statistics.correct,
-                usable: statistics.usable,
-                unusable: 0, 
-                correctPlusUsable: statistics.correct + statistics.usable,
-                validDays: statistics.validDays,
-                missingDays: statistics.missingDays,
-                YY: statistics.YY,
-                YN: statistics.YN,
-                NY: statistics.NY,
-                NN: statistics.NN,
-                matchingCases: statistics.matchingCases,
-                isRainfall: true
-              };
+            districtResult.parameters[parameter] = {
+              correct: statistics.correct,
+              usable: statistics.usable,
+              unusable: 0,
+              correctPlusUsable: statistics.correct + statistics.usable,
+              validDays: statistics.validDays,
+              missingDays: statistics.missingDays,
+              YY: statistics.YY,
+              YN: statistics.YN,
+              NY: statistics.NY,
+              NN: statistics.NN,
+              matchingCases: statistics.matchingCases,
+              isRainfall: true
+            };
           } else {
-              districtResult.parameters[parameter] = {
-                correct: statistics.correct,
-                usable: statistics.usable,
-                unusable: statistics.unusable,
-                correctPlusUsable: statistics.correct + statistics.usable,
-                validDays: statistics.validDays,
-                missingDays: statistics.missingDays,
-                n1: statistics.n1,
-                n2: statistics.n2,
-                n3: statistics.n3,
-                threshold1: statistics.threshold1,
-                threshold2: statistics.threshold2,
-                useN11ForUnusable: statistics.useN11ForUnusable,
-                isRainfall: false
-              };
+            districtResult.parameters[parameter] = {
+              correct: statistics.correct,
+              usable: statistics.usable,
+              unusable: statistics.unusable,
+              correctPlusUsable: statistics.correct + statistics.usable,
+              validDays: statistics.validDays,
+              missingDays: statistics.missingDays,
+              n1: statistics.n1,
+              n2: statistics.n2,
+              n3: statistics.n3,
+              threshold1: statistics.threshold1,
+              threshold2: statistics.threshold2,
+              useN11ForUnusable: statistics.useN11ForUnusable,
+              isRainfall: false
+            };
           }
         } else {
+          // No data available
           districtResult.parameters[parameter] = {
             correct: 0,
             usable: 0,
@@ -2536,19 +2620,25 @@ function performComprehensiveAnalysis() {
       results.push(districtResult);
     }
 
-    const stateAverages = calculateStateAverages(results, parameters);
-    
+    // Calculate state-wide averages
+    const stateAverages = calculateStateAverages(results, parameters);   
     comprehensiveResults = {
       day: day,
       districts: results,
       stateAverages: stateAverages,
-      parameters: parameters
+      parameters: parameters,
+      useDateRange: useDateRange,
+      startDate: startDate,
+      endDate: endDate
     };
 
+    // Display results
     displayComprehensiveResults(comprehensiveResults);
     
     document.getElementById('comprehensiveResultsSection').style.display = 'block';
-    showComprehensiveStatus(`✅ Comprehensive analysis completed for ${day}.`, 'success');
+    
+    const dateRangeText = useDateRange ? ` (${startDate} to ${endDate})` : '';
+    showComprehensiveStatus(`✅ Comprehensive analysis completed for ${day}${dateRangeText}.`, 'success');
 
   } catch (error) {
     console.error('Comprehensive analysis error:', error);
@@ -3239,4 +3329,56 @@ async function saveObservationToDatabase() {
       console.error('Database save error for observation:', error);
       showObservationStatus('❌ Error saving observation to database: ' + error.message, 'error');
     }
+}
+
+// Load forecast data from database by date range
+async function loadForecastDataByDateRange(startDate, endDate) {
+  try {
+    const { data, error } = await client
+      .from('full_forecast')
+      .select('*')
+      .gte('forecast_date', startDate)
+      .lte('forecast_date', endDate)
+      .order('forecast_date');
+    
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error loading forecast data by date range:', error);
+    throw error;
+  }
+}
+
+// Load observation data from database by date range
+async function loadObservationDataByDateRange(startDate, endDate) {
+  try {
+    const { data, error } = await client
+      .from('full_observation')
+      .select('*')
+      .gte('observation_date', startDate)
+      .lte('observation_date', endDate)
+      .order('observation_date');
+    
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error loading observation data by date range:', error);
+    throw error;
+  }
+}
+
+// Validate date range
+function validateDateRange(startDate, endDate) {
+  if (!startDate || !endDate) {
+    return { valid: false, message: 'Please select both start and end dates.' };
+  }
+  
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  
+  if (start > end) {
+    return { valid: false, message: 'Start date must be before end date.' };
+  }
+  
+  return { valid: true };
 }

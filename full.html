@@ -7,17 +7,14 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="full.css">
-    
 </head>
 <body>
   <header class="header">
     <h1 style="padding-bottom: 10px;" > Forecast Department - CWC Visakhapatnam </h1>
     <nav>
       <a href="full.html"> Analysis </a>
-      <a href="about.html">About</a>
     </nav>
   </header>
-
   <div class="container">
     <div class="section">
       <h2>Upload Forecast Data</h2>
@@ -25,30 +22,24 @@
         <label for="fileInput">Select Forecast Excel File:</label>
         <input type="file" id="fileInput" accept=".xlsx,.xls">
       </div>
-      
       <div class="form-group">
         <label for="holidayInput">Enter Holidays (MM/DD/YYYY format, comma-separated):</label>
         <textarea id="holidayInput" placeholder="e.g. 07/23/2025, 07/26/2025, 08/15/2025" rows="3"></textarea>
       </div>
-      
       <div class="form-group">
         <label for="sheetNameInput">Sheet Name for Database Storage:</label>
         <input type="text" id="sheetNameInput" placeholder="Enter unique sheet name">
         <div id="sheetNameValidation" style="display: none; color: red; font-size: 14px; margin-top: 5px;"></div>
       </div>
-      
       <button class="btn" onclick="processForecast()">🚀 Process & Allocate Forecast Days</button>
       <button class="btn" id="saveToDatabaseBtn" onclick="saveToDatabase()" disabled>💾 Save to Database</button>
-      
       <div id="processingStatus"></div>
     </div>
-
 <div class="section">
   <h2>📋 Manage Forecast Sheets</h2>
   <button class="btn" onclick="toggleSheetList('forecast')" id="toggleForecastBtn">
     📂 Show Uploaded Sheets (<span id="forecastSheetCount">0</span>)
   </button>
-  
   <div id="forecastSheetList" class="sheet-list" style="display: none;">
     <div class="loading" id="forecastSheetLoading" style="display: none;">
       Loading sheets...
@@ -69,46 +60,36 @@
         <button class="btn" onclick="filterByDay('Day5')">Day 5</button>
       </div>
     </div>
-
     <div class="section" id="resultsSection" style="display: none;">
       <h2> Processed Forecast Data</h2>
       <div class="loading" id="loadingIndicator">
       </div>
       <div id="result"></div>
     </div>
-    
-
 <div class="section">
     <h2> Upload Observation Data</h2>
-    
     <div class="form-group">
       <label for="observationFileInput">Select Observation Excel File:</label>
       <input type="file" id="observationFileInput" accept=".xlsx,.xls">
     </div>
-    
     <div class="form-group">
       <label for="observationHolidayInput">Enter Holidays for Observation (MM/DD/YYYY format, comma-separated):</label>
       <textarea id="observationHolidayInput" placeholder="e.g. 07/23/2025, 07/26/2025, 08/15/2025" rows="3"></textarea>
     </div>
-    
     <div class="form-group">
       <label for="observationSheetNameInput">Sheet Name for Observation Database Storage:</label>
       <input type="text" id="observationSheetNameInput" placeholder="Enter unique observation sheet name">
       <div id="observationSheetNameValidation" style="display: none; color: red; font-size: 14px; margin-top: 5px;"></div>
     </div>
-    
     <button class="btn" onclick="processObservation()">🚀 Process Observation Data</button>
     <button class="btn" id="saveObservationToDatabaseBtn" onclick="saveObservationToDatabase()" disabled>💾 Save Observation to Database</button>
-    
     <div id="observationProcessingStatus"></div>
 </div>
-
 <div class="section">
   <h2>📋 Manage Observation Sheets</h2>
   <button class="btn" onclick="toggleSheetList('observation')" id="toggleObservationBtn">
     📂 Show Uploaded Sheets (<span id="observationSheetCount">0</span>)
   </button>
-  
   <div id="observationSheetList" class="sheet-list" style="display: none;">
     <div class="loading" id="observationSheetLoading" style="display: none;">
       Loading sheets...
@@ -118,11 +99,8 @@
     </div>
   </div>
 </div>
-  
-
 <div class="section">
     <h2> Forecast vs Observation Comparison</h2>
-    
     <div class="form-group">
         <label for="comparisonDay">Select Day:</label>
         <select id="comparisonDay">
@@ -134,14 +112,12 @@
             <option value="Day5">Day 5</option>
         </select>
     </div>
-    
     <div class="form-group">
         <label for="comparisonDistrict">Select District:</label>
         <select id="comparisonDistrict">
             <option value="">-- Select District --</option>
         </select>
     </div>
-    
     <div class="form-group">
         <label for="comparisonParameter">Select Parameter:</label>
         <select id="comparisonParameter">
@@ -156,28 +132,34 @@
             <option value="cloud_cover_octa">Cloud Cover (octa)</option>
         </select>
     </div>
-    
+    <div class="form-group">
+      <label for="comparisonStartDate">Start Date:</label>
+      <input type="date" id="comparisonStartDate" />
+  </div>
+  <div class="form-group">
+      <label for="comparisonEndDate">End Date:</label>
+      <input type="date" id="comparisonEndDate" />
+  </div>
+  <div class="form-group">
+      <label>
+          <input type="checkbox" id="useDateRangeComparison" />
+          Use Date Range (if unchecked, uses processed data from above)
+      </label>
+  </div>
     <button class="btn" onclick="performComparison()">🔍 Analyze Comparison</button>
-    
     <div id="comparisonProcessingStatus"></div>
 </div>
-
 <div class="section" id="comparisonResultsSection" style="display: none;">
     <h2>📈 Comparison Analysis Results</h2>
-    
-    <div id="comparisonStats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;"></div>
-    
+    <div id="comparisonStats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;"></div> 
     <div id="comparisonTable" style="max-height: 600px; overflow: auto; border: 1px solid #ccc; border-radius: 8px;"></div>
     
     <div style="margin-top: 20px;">
         <button class="btn" onclick="exportComparisonToExcel()">📁 Export Comparison Results</button>
     </div>
 </div>
-
-
 <div class="section">
   <h2>📊 Comprehensive Analysis - All Districts & Parameters</h2>
-  
   <div class="form-group">
       <label for="comprehensiveDay">Select Day for Comprehensive Analysis:</label>
       <select id="comprehensiveDay">
@@ -188,25 +170,32 @@
           <option value="Day4">Day 4</option>
           <option value="Day5">Day 5</option>
       </select>
+      <div class="form-group">
+        <label for="comprehensiveStartDate">Start Date:</label>
+        <input type="date" id="comprehensiveStartDate" />
+    </div>
+    <div class="form-group">
+        <label for="comprehensiveEndDate">End Date:</label>
+        <input type="date" id="comprehensiveEndDate" />
+    </div>
+    <div class="form-group">
+        <label>
+            <input type="checkbox" id="useDateRangeComprehensive" />
+            Use Date Range (if unchecked, uses processed data from above)
+        </label>
+    </div>
   </div>
-  
   <button class="btn" onclick="performComprehensiveAnalysis()">🔍 Generate Comprehensive Report</button>
-  
   <div id="comprehensiveProcessingStatus"></div>
 </div>
-
 <div class="section" id="comprehensiveResultsSection" style="display: none;">
   <h2>📈 Comprehensive Analysis Results</h2>
-  
   <div id="comprehensiveSummary"></div>
-  
   <div id="comprehensiveTable" style="max-height: 600px; overflow: auto; border: 1px solid #ccc; border-radius: 8px;"></div>
-  
   <div style="margin-top: 20px;">
       <button class="btn" onclick="exportComprehensiveToExcel()">📁 Export Comprehensive Analysis</button>
   </div>
 </div>
-
   <script src="full.js"></script>
 </body>
 </html>
