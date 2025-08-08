@@ -3,6 +3,42 @@ const SUPABASE_URL = 'https://ndbsshedsranhvdsspyb.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kYnNzaGVkc3Jhbmh2ZHNzcHliIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0OTM2NTgsImV4cCI6MjA2ODA2OTY1OH0.2aGvJfaPVqiwXR_hPWbgSXl_BphvkEtAsg1rkOM-eVY';
 const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+/**
+ * Fetch all rows for a given Supabase query by paging in chunks (default 1000).
+ * This bypasses the PostgREST default max rows per request.
+ *
+ * baseQueryBuilder: a Supabase query with all filters/selects applied, but without range/order.
+ * orderByColumn: a stable column name to order by while paginating (e.g., 'forecast_date').
+ * isAscending: set to false for descending.
+ * pageSize: typically 1000 (Supabase default limit per page).
+ */
+async function fetchAllRows(baseQueryBuilder, orderByColumn, isAscending = true, pageSize = 1000) {
+  const aggregatedRows = [];
+  let offset = 0;
+  // Defensive check
+  if (!orderByColumn || typeof orderByColumn !== 'string') {
+    throw new Error('fetchAllRows requires a valid orderByColumn');
+  }
+
+  // Loop until a page returns less than pageSize
+  while (true) {
+    const { data, error } = await baseQueryBuilder
+      .order(orderByColumn, { ascending: isAscending })
+      .range(offset, offset + pageSize - 1);
+
+    if (error) throw error;
+
+    const rows = data || [];
+    if (rows.length === 0) break;
+
+    aggregatedRows.push(...rows);
+    if (rows.length < pageSize) break;
+    offset += pageSize;
+  }
+
+  return aggregatedRows;
+}
+
 
 // Global variables
 let forecastRows = [];
@@ -1825,122 +1861,7 @@ function showObservationStatus(message, type) {
     }
   }
 
-// async function performComparison() {
-//   const day = document.getElementById('comparisonDay').value;
-//   const district = document.getElementById('comparisonDistrict').value;
-//   const parameter = document.getElementById('comparisonParameter').value;
-//   const useDateRange = document.getElementById('useDateRangeComparison').checked;
-//   const startDate = document.getElementById('comparisonStartDate').value;
-//   const endDate = document.getElementById('comparisonEndDate').value;
-  
-//   if (!day || !district || !parameter) {
-//     showComparisonStatus('❌ Please select day, district, and parameter for comparison.', 'error');
-//     return;
-//   }
 
-//   let forecastData, observationData;
-
-//   if (useDateRange) {
-//     // Validate date range
-//     const validation = validateDateRange(startDate, endDate);
-//     if (!validation.valid) {
-//       showComparisonStatus('❌ ' + validation.message, 'error');
-//       return;
-//     }
-
-//     showComparisonStatus('🔍 Loading data from database for date range...', 'info');
-
-//     try {
-//       // Load data from database
-//       const [dbForecastData, dbObservationData] = await Promise.all([
-//         loadForecastDataByDateRange(startDate, endDate),
-//         loadObservationDataByDateRange(startDate, endDate)
-//       ]);
-
-//       // Filter by district and day
-//       const dayNumber = parseInt(day.replace('Day', ''));
-//       forecastData = dbForecastData.filter(row => 
-//         row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
-//         row.day_number === dayNumber
-//       );
-
-//       observationData = dbObservationData.filter(row => 
-//         row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
-//         row.day_number === dayNumber
-//       );
-
-//     } catch (error) {
-//       showComparisonStatus('❌ Error loading data from database: ' + error.message, 'error');
-//       return;
-//     }
-//   } else {
-//     // Use existing processed data
-//     if (processedOutput.length === 0) {
-//       showComparisonStatus('❌ No forecast data available. Please process forecast data first.', 'error');
-//       return;
-//     }
-
-//     if (processedObservationOutput.length === 0) {
-//       showComparisonStatus('❌ No observation data available. Please process observation data first.', 'error');
-//       return;
-//     }
-
-//     const dayNumber = parseInt(day.replace('Day', ''));
-//     forecastData = processedOutput.filter(row => 
-//       row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
-//       row.day_number === dayNumber
-//     );
-
-//     observationData = processedObservationOutput.filter(row => 
-//       row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
-//       row.day_number === dayNumber
-//     );
-//   }
-
-//   if (forecastData.length === 0) {
-//     showComparisonStatus('❌ No forecast data found for the selected criteria.', 'error');
-//     return;
-//   }
-
-//   if (observationData.length === 0) {
-//     showComparisonStatus('❌ No observation data found for the selected criteria.', 'error');
-//     return;
-//   }
-
-//   showComparisonStatus('🔍 Performing comparison analysis...', 'info');
-
-//   try {
-//     // Create comparison results
-//     const comparisonData = createComparisonData(forecastData, observationData, parameter);
-//     const statistics = calculateStatistics(comparisonData, parameter);
-
-//     // Store results globally for export
-//     comparisonResults = {
-//       data: comparisonData,
-//       statistics: statistics,
-//       metadata: {
-//         day: day,
-//         district: district,
-//         parameter: parameter,
-//         useDateRange: useDateRange,
-//         startDate: startDate,
-//         endDate: endDate
-//       }
-//     };
-
-//     // Display results
-//     displayComparisonResults(comparisonData, statistics, day, district, parameter);
-    
-//     document.getElementById('comparisonResultsSection').style.display = 'block';
-    
-//     const dateRangeText = useDateRange ? ` (${startDate} to ${endDate})` : '';
-//     showComparisonStatus(`✅ Comparison analysis completed for ${district} - ${parameter} - ${day}${dateRangeText}.`, 'success');
-
-//   } catch (error) {
-//     console.error('Comparison error:', error);
-//     showComparisonStatus('❌ Comparison error: ' + error.message, 'error');
-//   }
-// }
 
 async function performComparison() {
   const day = document.getElementById('comparisonDay').value;
@@ -2656,167 +2577,6 @@ function displayComparisonResults(comparisonData, statistics, day, district, par
 }
 
 
-
-// async function performComprehensiveAnalysis() {
-//   const day = document.getElementById('comprehensiveDay').value;
-//   const useDateRange = document.getElementById('useDateRangeComprehensive').checked;
-//   const startDate = document.getElementById('comprehensiveStartDate').value;
-//   const endDate = document.getElementById('comprehensiveEndDate').value;
-  
-//   if (!day) {
-//     showComprehensiveStatus('❌ Please select a day for analysis.', 'error');
-//     return;
-//   }
-
-//   let allForecastData, allObservationData;
-
-//   if (useDateRange) {
-//     // Validate date range
-//     const validation = validateDateRange(startDate, endDate);
-//     if (!validation.valid) {
-//       showComprehensiveStatus('❌ ' + validation.message, 'error');
-//       return;
-//     }
-
-//     showComprehensiveStatus('🔍 Loading data from database for date range...', 'info');
-
-//     try {
-//       // Load data from database
-//       [allForecastData, allObservationData] = await Promise.all([
-//         loadForecastDataByDateRange(startDate, endDate),
-//         loadObservationDataByDateRange(startDate, endDate)
-//       ]);
-
-//     } catch (error) {
-//       showComprehensiveStatus('❌ Error loading data from database: ' + error.message, 'error');
-//       return;
-//     }
-//   } else {
-//     // Use existing processed data
-//     if (processedOutput.length === 0) {
-//       showComprehensiveStatus('❌ No forecast data available. Please process forecast data first.', 'error');
-//       return;
-//     }
-
-//     if (processedObservationOutput.length === 0) {
-//       showComprehensiveStatus('❌ No observation data available. Please process observation data first.', 'error');
-//       return;
-//     }
-
-//     allForecastData = processedOutput;
-//     allObservationData = processedObservationOutput;
-//   }
-
-//   showComprehensiveStatus('🔍 Performing comprehensive analysis for all districts and parameters...', 'info');
-
-//   try {
-//     const dayNumber = parseInt(day.replace('Day', ''));
-//     const results = [];
-    
-//     // Get all unique districts from the data
-//     const allDistricts = [...new Set(allForecastData.map(row => row.district_name))];
-//     const parameters = Object.keys(parameterNames);
-    
-//     // For each district, analyze all parameters
-//     for (const district of allDistricts) {
-//       const districtResult = {
-//         district: district,
-//         parameters: {}
-//       };
-      
-//       for (const parameter of parameters) {
-//         // Filter forecast data for this district and day
-//         const forecastData = allForecastData.filter(row => 
-//           row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
-//           row.day_number === dayNumber
-//         );
-
-//         // Filter observation data for this district and day
-//         const observationData = allObservationData.filter(row => 
-//           row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
-//           row.day_number === dayNumber
-//         );
-
-//         if (forecastData.length > 0 && observationData.length > 0) {
-//           // Create comparison data for this parameter
-//           const comparisonData = createComparisonData(forecastData, observationData, parameter);
-//           const statistics = calculateStatistics(comparisonData, parameter);
-          
-//           if (statistics.isRainfall) {
-//             districtResult.parameters[parameter] = {
-//               correct: statistics.correct,
-//               usable: statistics.usable,
-//               unusable: 0,
-//               correctPlusUsable: statistics.correct + statistics.usable,
-//               validDays: statistics.validDays,
-//               missingDays: statistics.missingDays,
-//               YY: statistics.YY,
-//               YN: statistics.YN,
-//               NY: statistics.NY,
-//               NN: statistics.NN,
-//               matchingCases: statistics.matchingCases,
-//               isRainfall: true
-//             };
-//           } else {
-//             districtResult.parameters[parameter] = {
-//               correct: statistics.correct,
-//               usable: statistics.usable,
-//               unusable: statistics.unusable,
-//               correctPlusUsable: statistics.correct + statistics.usable,
-//               validDays: statistics.validDays,
-//               missingDays: statistics.missingDays,
-//               n1: statistics.n1,
-//               n2: statistics.n2,
-//               n3: statistics.n3,
-//               threshold1: statistics.threshold1,
-//               threshold2: statistics.threshold2,
-//               useN11ForUnusable: statistics.useN11ForUnusable,
-//               isRainfall: false
-//             };
-//           }
-//         } else {
-//           // No data available
-//           districtResult.parameters[parameter] = {
-//             correct: 0,
-//             usable: 0,
-//             unusable: 0,
-//             correctPlusUsable: 0,
-//             validDays: 0,
-//             missingDays: 0,
-//             isRainfall: parameter === 'rainfall'
-//           };
-//         }
-//       }
-      
-//       results.push(districtResult);
-//     }
-
-//     // Calculate state-wide averages
-//     const stateAverages = calculateStateAverages(results, parameters);   
-//     comprehensiveResults = {
-//       day: day,
-//       districts: results,
-//       stateAverages: stateAverages,
-//       parameters: parameters,
-//       useDateRange: useDateRange,
-//       startDate: startDate,
-//       endDate: endDate
-//     };
-
-//     // Display results
-//     displayComprehensiveResults(comprehensiveResults);
-    
-//     document.getElementById('comprehensiveResultsSection').style.display = 'block';
-    
-//     const dateRangeText = useDateRange ? ` (${startDate} to ${endDate})` : '';
-//     showComprehensiveStatus(`✅ Comprehensive analysis completed for ${day}${dateRangeText}.`, 'success');
-
-//   } catch (error) {
-//     console.error('Comprehensive analysis error:', error);
-//     showComprehensiveStatus('❌ Comprehensive analysis error: ' + error.message, 'error');
-//   }
-// }
-
 async function performComprehensiveAnalysis() {
   const day = document.getElementById('comprehensiveDay').value;
   const useDateRange = document.getElementById('useDateRangeComprehensive').checked;
@@ -3281,14 +3041,13 @@ async function loadSheetInformation() {
 
 async function loadForecastSheetInfo() {
   try {
-    const { data, error } = await client
+    const baseQuery = client
       .from('full_forecast')
       .select('sheet_name, forecast_date, district_name')
-      .not('sheet_name', 'is', null)
-      .order('sheet_name', { ascending: true });
-    
-    if (error) throw error;
-    
+      .not('sheet_name', 'is', null);
+
+    const data = await fetchAllRows(baseQuery, 'sheet_name', true);
+
     // Group by sheet_name and calculate metadata
     const sheetGroups = {};
     data.forEach(row => {
@@ -3329,14 +3088,13 @@ async function loadForecastSheetInfo() {
 
 async function loadObservationSheetInfo() {
   try {
-    const { data, error } = await client
+    const baseQuery = client
       .from('full_observation')
       .select('sheet_name, observation_date, district_name')
-      .not('sheet_name', 'is', null)
-      .order('sheet_name', { ascending: true });
-    
-    if (error) throw error;
-    
+      .not('sheet_name', 'is', null);
+
+    const data = await fetchAllRows(baseQuery, 'sheet_name', true);
+
     // Group by sheet_name and calculate metadata
     const sheetGroups = {};
     data.forEach(row => {
@@ -3691,15 +3449,13 @@ async function saveObservationToDatabase() {
 // Load forecast data from database by date range
 async function loadForecastDataByDateRange(startDate, endDate) {
   try {
-    const { data, error } = await client
+    const baseQuery = client
       .from('full_forecast')
       .select('*')
       .gte('forecast_date', startDate)
-      .lte('forecast_date', endDate)
-      .order('forecast_date');
-    
-    if (error) throw error;
-    return data || [];
+      .lte('forecast_date', endDate);
+
+    return await fetchAllRows(baseQuery, 'forecast_date', true);
   } catch (error) {
     console.error('Error loading forecast data by date range:', error);
     throw error;
@@ -3709,15 +3465,13 @@ async function loadForecastDataByDateRange(startDate, endDate) {
 // Load observation data from database by date range
 async function loadObservationDataByDateRange(startDate, endDate) {
   try {
-    const { data, error } = await client
+    const baseQuery = client
       .from('full_observation')
       .select('*')
       .gte('observation_date', startDate)
-      .lte('observation_date', endDate)
-      .order('observation_date');
-    
-    if (error) throw error;
-    return data || [];
+      .lte('observation_date', endDate);
+
+    return await fetchAllRows(baseQuery, 'observation_date', true);
   } catch (error) {
     console.error('Error loading observation data by date range:', error);
     throw error;
@@ -3807,19 +3561,13 @@ async function loadDataBySheets(forecastSheet, observationSheet, startDate = nul
       observationQuery = observationQuery.gte('observation_date', startDate).lte('observation_date', endDate);
     }
     
-    // Execute queries
-    const [forecastResult, observationResult] = await Promise.all([
-      forecastQuery.order('forecast_date'),
-      observationQuery.order('observation_date')
+    // Execute queries with pagination to fetch all rows
+    const [forecastData, observationData] = await Promise.all([
+      fetchAllRows(forecastQuery, 'forecast_date', true),
+      fetchAllRows(observationQuery, 'observation_date', true)
     ]);
-    
-    if (forecastResult.error) throw forecastResult.error;
-    if (observationResult.error) throw observationResult.error;
-    
-    return {
-      forecastData: forecastResult.data || [],
-      observationData: observationResult.data || []
-    };
+
+    return { forecastData, observationData };
   } catch (error) {
     console.error('Error loading data by sheets:', error);
     throw error;
