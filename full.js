@@ -554,6 +554,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     populateComparisonDropdowns(); 
     await loadSheetInformation();
 
+    const useSpecificSheetsComparison = document.getElementById('useSpecificSheetsComparison');
     const useSpecificSheetsComprehensive = document.getElementById('useSpecificSheetsComprehensive');
     
     if (useSpecificSheetsComparison) {
@@ -3746,6 +3747,11 @@ function toggleSheetSelection(type) {
     populateSheetDropdowns(type);
   } else {
     selectionDiv.style.display = 'none';
+    // Remove any existing summary when hiding the selection
+    const existingSummary = document.getElementById(`sheetSummary_${type}`);
+    if (existingSummary) {
+      existingSummary.remove();
+    }
   }
 }
 
@@ -3949,6 +3955,14 @@ async function loadDataBySheets(forecastSheetsOrOne, observationSheetsOrOne, sta
 }
 
 function addSheetSelectionSummary(type) {
+  // Check if summary already exists
+  const existingSummary = document.getElementById(`sheetSummary_${type}`);
+  if (existingSummary) {
+    // If summary exists, just update it and return
+    updateSheetSelectionSummary(type);
+    return;
+  }
+  
   // Add summary section
   const summaryDiv = document.createElement('div');
   summaryDiv.id = `sheetSummary_${type}`;
