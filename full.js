@@ -1,6 +1,6 @@
 // Supabase Setup
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
+const SUPABASE_URL = 'https://ndbsshedsranhvdsspyb.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kYnNzaGVkc3Jhbmh2ZHNzcHliIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0OTM2NTgsImV4cCI6MjA2ODA2OTY1OH0.2aGvJfaPVqiwXR_hPWbgSXl_BphvkEtAsg1rkOM-eVY';
 const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /**
@@ -37,6 +37,103 @@ async function fetchAllRows(baseQueryBuilder, orderByColumn, isAscending = true,
   }
 
   return aggregatedRows;
+}
+
+// ------------------------------
+// District name normalization
+// ------------------------------
+const CORRECT_DISTRICTS = [
+  'ALLURI SITHARAMA RAJU', 'ANAKAPALLI', 'ANANTPUR', 'ANNAMAYYA', 'BAPATLA',
+  'CHITTOOR', 'DR. B.R. AMBEDKAR KONASEEMA', 'EAST-GODAVARI', 'ELURU', 'GUNTUR',
+  'KAKINADA', 'KRISHNA', 'KURNOOL', 'NANDYAL', 'NELLORE', 'NTR', 'PALNADU',
+  'PARVATHIPURAM MANYAM', 'PRAKASAM', 'SRIKAKULAM', 'SRI SATHYA SAI', 'TIRUPATHI',
+  'VISAKHAPATNAM', 'VIZIANAGARAM', 'WEST-GODAVARI', 'KADAPA'
+];
+
+const DISTRICT_ALIASES = {
+  // Common variations → canonical name
+  'ANANTAPUR': 'ANANTPUR',
+  'YSR KADAPA': 'KADAPA',
+  'YSR': 'KADAPA',
+  'YSR KADAP': 'KADAPA',
+  'SPSR NELLORE': 'NELLORE',
+  'WEST GODAVARI': 'WEST-GODAVARI',
+  'VISAKHA': 'VISAKHAPATNAM',
+  'VSKP': 'VISAKHAPATNAM',
+  'VISAKHAPATANAM' : 'VISAKHAPATNAM'
+};
+
+function normalizeKey(name) {
+  return name
+    .toUpperCase()
+    .trim()
+    .replace(/\./g, '')
+    .replace(/-/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/[^A-Z0-9 ]/g, '') // remove other punctuation
+    .trim();
+}
+
+const NORMALIZED_CORRECT_MAP = (() => {
+  const map = new Map();
+  for (const d of CORRECT_DISTRICTS) {
+    map.set(normalizeKey(d), d);
+  }
+  return map;
+})();
+
+function levenshteinDistance(a, b) {
+  const m = a.length, n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + cost
+      );
+    }
+  }
+  return dp[m][n];
+}
+
+function normalizeDistrictName(inputName) {
+  if (!inputName) return '';
+  const original = inputName.toString().trim();
+  const upper = original.toUpperCase();
+
+  // 1) Alias direct mapping
+  if (DISTRICT_ALIASES[upper]) return DISTRICT_ALIASES[upper];
+
+  // 2) Exact match against canonical list
+  if (CORRECT_DISTRICTS.includes(upper)) return upper;
+
+  // 3) Normalize keys and compare
+  const key = normalizeKey(original);
+  if (NORMALIZED_CORRECT_MAP.has(key)) return NORMALIZED_CORRECT_MAP.get(key);
+
+  // 4) Fuzzy match via Levenshtein
+  let best = null;
+  let bestDist = Infinity;
+  for (const d of CORRECT_DISTRICTS) {
+    const dist = levenshteinDistance(key, normalizeKey(d));
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = d;
+    }
+  }
+  // Accept close matches only (tuned threshold)
+  if (best && (bestDist <= 3 || bestDist / Math.max(key.length, 1) <= 0.2)) {
+    return best;
+  }
+
+  // 5) Fallback to upper-trimmed original if no good match found
+  return upper;
 }
 
 
@@ -114,13 +211,13 @@ async function performComprehensiveAnalysis() {
         for (const parameter of parameters) {
           // Filter forecast data for this district and day
           const forecastData = processedOutput.filter(row => 
-            row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
+            normalizeDistrictName(row.district_name) === normalizeDistrictName(district) &&
             row.day_number === dayNumber
           );
   
           // Filter observation data for this district and day
           const observationData = processedObservationOutput.filter(row => 
-            row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
+            normalizeDistrictName(row.district_name) === normalizeDistrictName(district) &&
             row.day_number === dayNumber
           );
   
@@ -425,10 +522,10 @@ function showComprehensiveStatus(message, type) {
 // Districts and Parameters for verification
 const districts = [
   "ALLURI SITHARAMA RAJU", "ANAKAPALLI", "ANANTPUR", "ANNAMAYYA", "BAPATLA",
-  "CHITTOOR", "DR. B.R. AMBEDKAR KONASEEMA", "EAST-GODAVARI","WEST GODAVARI", "ELURU", "GUNTUR",
+  "CHITTOOR", "DR. B.R. AMBEDKAR KONASEEMA", "EAST-GODAVARI", "ELURU", "GUNTUR",
   "KAKINADA", "KRISHNA", "KURNOOL", "NANDYAL", "NELLORE", "NTR", "PALNADU",
   "PARVATHIPURAM MANYAM", "PRAKASAM", "SRIKAKULAM", "SRI SATHYA SAI", "TIRUPATHI",
-  "VISAKHAPATNAM", "VIZIANAGARAM", "WEST GODAVARI", "KADAPA"
+  "VISAKHAPATNAM", "VIZIANAGARAM", "WEST-GODAVARI", "KADAPA"
 ];
 
 const parameterMapping = {
@@ -619,7 +716,10 @@ function handleFileUpload(e) {
           wind_direction_deg: parseNullableFloat(row.wind_direction_deg),
           cloud_cover_octa: parseNullableFloat(row.cloud_cover_octa)
         };
-      }).filter(row => row !== null && row.district_name); // Remove invalid rows
+      }).map(row => ({
+        ...row,
+        district_name: normalizeDistrictName(row.district_name)
+      })).filter(row => row !== null && row.district_name); // Normalize and remove invalid rows
 
       console.log(`Processed ${forecastRows.length} valid rows from Excel`);
       
@@ -683,7 +783,10 @@ function handleObservationFileUpload(e) {
             wind_direction_deg: parseNullableFloat(row.wind_direction_deg),
             cloud_cover_octa: parseNullableFloat(row.cloud_cover_octa)
           };
-        }).filter(row => row !== null && row.district_name); // Remove invalid rows
+        }).map(row => ({
+          ...row,
+          district_name: normalizeDistrictName(row.district_name)
+        })).filter(row => row !== null && row.district_name); // Normalize and remove invalid rows
   
         console.log(`Processed ${observationRows.length} valid observation rows from Excel`);
         
@@ -835,14 +938,14 @@ const holidays = holidaysInput
     console.log('Start date for forecasting:', formatDate(startDate));
 
     // 3. Get all unique district names from the sheet
-    const uniqueDistricts = [...new Set(forecastRows.map(row => row.district_name))];
+    const uniqueDistricts = [...new Set(forecastRows.map(row => normalizeDistrictName(row.district_name)))];
     console.log('Districts found:', uniqueDistricts);
 
     // 4. Create a lookup map for faster data access
     const dataLookup = {};
     forecastRows.forEach(row => {
       const dateKey = formatDate(row.forecast_date);
-      const districtKey = row.district_name.toUpperCase().trim();
+      const districtKey = normalizeDistrictName(row.district_name);
       const key = `${districtKey}|${dateKey}`;
       
       // Keep the latest entry for each district-date combination
@@ -984,14 +1087,14 @@ function processObservation() {
         console.log('Start date for observation forecasting:', formatDate(startDate));
   
         // 3. Get all unique district names from the sheet
-        const uniqueDistricts = [...new Set(observationRows.map(row => row.district_name))];
+        const uniqueDistricts = [...new Set(observationRows.map(row => normalizeDistrictName(row.district_name)))];
         console.log('Districts found in observation:', uniqueDistricts);
   
         // 4. Create a lookup map for faster data access
         const dataLookup = {};
         observationRows.forEach(row => {
           const dateKey = formatDate(row.observation_date);
-          const districtKey = row.district_name.toUpperCase().trim();
+          const districtKey = normalizeDistrictName(row.district_name);
           const key = `${districtKey}|${dateKey}`;
           
           // Keep the latest entry for each district-date combination
@@ -1628,7 +1731,7 @@ async function performVerification() {
 
    // Update the currentData filter to include day
 const currentData = processedOutput.filter(row => 
-    row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
+    normalizeDistrictName(row.district_name) === normalizeDistrictName(district) &&
     row.day === day
   );
   
@@ -1637,7 +1740,8 @@ const currentData = processedOutput.filter(row =>
   const { data: dbData, error } = await client
     .from('full_forecast')
     .select(`forecast_date, district_name, day_number, ${dbColumn}, sheet_name`)
-    .ilike('district_name', district)
+    // Use ilike for broad match but filter client-side with normalized names
+    .ilike('district_name', `%${district}%`)
     .eq('day_number', dayNumber)
     .not(dbColumn, 'is', null)
     .order('forecast_date');
@@ -1908,12 +2012,12 @@ async function performComparison() {
       
       const dayNumber = parseInt(day.replace('Day', ''));
       forecastData = dbForecastData.filter(row => 
-        row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
+        normalizeDistrictName(row.district_name) === normalizeDistrictName(district) &&
         row.day_number === dayNumber
       );
 
       observationData = dbObservationData.filter(row => 
-        row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
+        normalizeDistrictName(row.district_name) === normalizeDistrictName(district) &&
         row.day_number === dayNumber
       );
       
@@ -1934,12 +2038,12 @@ async function performComparison() {
 
       const dayNumber = parseInt(day.replace('Day', ''));
       forecastData = dbForecastData.filter(row => 
-        row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
+        normalizeDistrictName(row.district_name) === normalizeDistrictName(district) &&
         row.day_number === dayNumber
       );
 
       observationData = dbObservationData.filter(row => 
-        row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
+        normalizeDistrictName(row.district_name) === normalizeDistrictName(district) &&
         row.day_number === dayNumber
       );
 
@@ -1957,12 +2061,12 @@ async function performComparison() {
 
       const dayNumber = parseInt(day.replace('Day', ''));
       forecastData = processedOutput.filter(row => 
-        row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
+        normalizeDistrictName(row.district_name) === normalizeDistrictName(district) &&
         row.day_number === dayNumber
       );
 
       observationData = processedObservationOutput.filter(row => 
-        row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
+        normalizeDistrictName(row.district_name) === normalizeDistrictName(district) &&
         row.day_number === dayNumber
       );
     }
@@ -2671,13 +2775,13 @@ async function performComprehensiveAnalysis() {
       for (const parameter of parameters) {
         // Filter forecast data for this district and day
         const forecastData = allForecastData.filter(row => 
-          row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
+          normalizeDistrictName(row.district_name) === normalizeDistrictName(district) &&
           row.day_number === dayNumber
         );
 
         // Filter observation data for this district and day
         const observationData = allObservationData.filter(row => 
-          row.district_name.toUpperCase().trim() === district.toUpperCase().trim() &&
+          normalizeDistrictName(row.district_name) === normalizeDistrictName(district) &&
           row.day_number === dayNumber
         );
 

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Help & User Guide</title>
+  <link rel="stylesheet" href="full.css" />
+  <style>
+    .guide-container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+    .hero { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: center; }
+    .hero img { width: 100%; height: auto; border-radius: 10px; border: 1px solid #e5e7eb; background: #f3f4f6; }
+    .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; margin: 14px 0; }
+    .card h3 { margin: 0 0 10px; }
+    .toc a { color: #2563eb; text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    .section h2 { margin-top: 28px; }
+    .kbd { display: inline-block; padding: 2px 6px; border: 1px solid #d1d5db; border-bottom-width: 2px; border-radius: 6px; background: #f9fafb; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+    .muted { color: #6b7280; }
+    ul { margin: 8px 0 0 18px; }
+    li { margin: 6px 0; }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #eef2ff; color: #3730a3; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <h1 style="padding-bottom: 10px;">Help & User Guide</h1>
+    <nav>
+      <a href="full.html">Analysis</a>
+      <a href="about.html">Help & Guide</a>
+    </nav>
+  </header>
+
+  <div class="guide-container">
+    <div class="hero card">
+      <div>
+        <h2>Welcome to the Forecast & Observation Analysis Tool</h2>
+        <p class="muted">This page explains how to use the app, what each section does, and how results are produced. Keep this open while working in the Analysis page for quick reference.</p>
+        <div style="margin-top: 10px;">
+          <span class="pill">Forecast</span>
+          <span class="pill" style="margin-left: 6px;">Observation</span>
+          <span class="pill" style="margin-left: 6px;">Comparison</span>
+          <span class="pill" style="margin-left: 6px;">Comprehensive</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card toc">
+      <h3>Quick links</h3>
+      <ul>
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#forecast-upload">Upload Forecast</a></li>
+        <li><a href="#observation-upload">Upload Observation</a></li>
+        <li><a href="#processing">Processing & Saving</a></li>
+        <li><a href="#sheets">Managing Uploaded Sheets</a></li>
+        <li><a href="#comparison">Forecast vs Observation Comparison</a></li>
+        <li><a href="#comprehensive">Comprehensive Analysis</a></li>
+        <li><a href="#exporting">Exporting to Excel</a></li>
+        <li><a href="#normalization">District Name Normalization</a></li>
+        <li><a href="#troubleshooting">Troubleshooting</a></li>
+      </ul>
+    </div>
+
+    <div id="overview" class="section card">
+      <h2>Overview</h2>
+      <p>
+        The Analysis page (<span class="kbd">full.html</span>) lets you:
+      </p>
+      <ul>
+        <li>Upload a Forecast Excel file and automatically allocate Day 1–Day 5 outputs.</li>
+        <li>Upload an Observation Excel file and generate aligned daily observation rows.</li>
+        <li>Optionally save processed data to the database for later querying and comparison.</li>
+        <li>Compare Forecast vs Observation for a specific District, Day, Parameter, and optional Date Range or Specific Sheets.</li>
+        <li>Create a Comprehensive report across all Districts for a given Day and optional Date Range/Specific Sheets.</li>
+      </ul>
+    </div>
+
+    <div id="excel-reqs" class="section card">
+        <h2>Excel Template Requirements</h2>
+        <p>Ensure your Excel files use the following exact column headers (lowercase with underscores):</p>
+        <ul>
+          <li><strong>forecast_date</strong> (in MM-DD-YYYY format)</li>
+          <li><strong>district_name</strong></li>
+          <li><strong>rainfall</strong></li>
+          <li><strong>temp_max_c</strong></li>
+          <li><strong>temp_min_c</strong></li>
+          <li><strong>humidity_1</strong></li>
+          <li><strong>humidity_2</strong></li>
+          <li><strong>wind_speed_kmph</strong></li>
+          <li><strong>wind_direction_deg</strong></li>
+          <li><strong>cloud_cover_octa</strong></li>
+        </ul>
+      </div>
+
+    <div id="forecast-upload" class="section card">
+      <h2>Upload Forecast</h2>
+      <ul>
+        <li>Go to <a href="full.html">Analysis</a> and in "Upload Forecast Data" choose your Excel file.</li>
+        <li>Optionally add holidays (comma-separated, MM/DD/YYYY) to adjust scheduling.</li>
+        <li>Click <span class="kbd">Process & Allocate Forecast Days</span> to generate Day 1–5 data.</li>
+        <li>When ready, enter a unique sheet name and click <span class="kbd">Save to Database</span>.</li>
+      </ul>
+    </div>
+
+    <div id="observation-upload" class="section card">
+      <h2>Upload Observation</h2>
+      <ul>
+        <li>In "Upload Observation Data", choose your Observation Excel file.</li>
+        <li>Optionally add holidays to adjust scheduling similarly to Forecast.</li>
+        <li>Click <span class="kbd">Process Observation Data</span>, then provide a unique sheet name and <span class="kbd">Save Observation to Database</span>.</li>
+      </ul>
+    </div>
+
+    <div id="processing" class="section card">
+      <h2>Processing & Saving</h2>
+      <ul>
+        <li>The tool parses your Excel, normalizes district names, and generates 5-day allocations (Forecast) or aligned daily rows (Observation).</li>
+        <li>Processed results are shown on screen. Use filters to view specific days.</li>
+        <li>Click save to persist into the database tables <span class="kbd">full_forecast</span> and <span class="kbd">full_observation</span>.</li>
+      </ul>
+    </div>
+
+    <div id="sheets" class="section card">
+      <h2>Managing Uploaded Sheets</h2>
+      <ul>
+        <li>Use the "Manage Forecast Sheets" and "Manage Observation Sheets" sections to view previously uploaded sheets.</li>
+        <li>Click <span class="kbd">Show Uploaded Sheets</span> to see counts, date ranges, and districts; use <span class="kbd">Delete</span> to remove a sheet.</li>
+      </ul>
+    </div>
+
+    <div id="comparison" class="section card">
+      <h2>Forecast vs Observation Comparison</h2>
+      <ul>
+        <li>Select Day, District, and Parameter.</li>
+        <li>Optionally set a Date Range or tick <span class="kbd">Use Specific Sheets</span> to limit to selected Forecast/Observation sheets.</li>
+        <li>Click <span class="kbd">Analyze Comparison</span> to see metrics and a detailed table.</li>
+      </ul>
+    </div>
+
+    <div id="comprehensive" class="section card">
+      <h2>Comprehensive Analysis</h2>
+      <ul>
+        <li>Pick a Day and optional Date Range.</li>
+        <li>Optionally tick <span class="kbd">Use Specific Sheets</span> and select which sheets to include.</li>
+        <li>Click <span class="kbd">Generate Comprehensive Report</span> for an all-districts, all-parameters summary.</li>
+      </ul>
+    </div>
+
+    <div id="exporting" class="section card">
+      <h2>Exporting to Excel</h2>
+      <ul>
+        <li>Use the export buttons in each section to download the current view or results as an Excel file.</li>
+      </ul>
+    </div>
+
+    <div id="normalization" class="section card">
+      <h2>District Name Normalization</h2>
+      <ul>
+        <li>District names from Excel are normalized to a canonical list to handle minor spelling/punctuation differences.</li>
+        <li>Known aliases (e.g., “ANANTAPUR” → “ANANTPUR”, “YSR KADAPA” → “KADAPA”, “VISAKHA” → “VISAKHAPATNAM”) are corrected automatically.</li>
+        <li>If a name is close but not exact, a fuzzy match selects the nearest valid district.</li>
+      </ul>
+      <h3>Valid District Names (exact)</h3>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; margin-top: 10px;">
+        <div>ALLURI SITHARAMA RAJU</div>
+        <div>ANAKAPALLI</div>
+        <div>ANANTPUR</div>
+        <div>ANNAMAYYA</div>
+        <div>BAPATLA</div>
+        <div>CHITTOOR</div>
+        <div>DR. B.R. AMBEDKAR KONASEEMA</div>
+        <div>EAST-GODAVARI</div>
+        <div>ELURU</div>
+        <div>GUNTUR</div>
+        <div>KAKINADA</div>
+        <div>KRISHNA</div>
+        <div>KURNOOL</div>
+        <div>NANDYAL</div>
+        <div>NELLORE</div>
+        <div>NTR</div>
+        <div>PALNADU</div>
+        <div>PARVATHIPURAM MANYAM</div>
+        <div>PRAKASAM</div>
+        <div>SRIKAKULAM</div>
+        <div>SRI SATHYA SAI</div>
+        <div>TIRUPATHI</div>
+        <div>VISAKHAPATNAM</div>
+        <div>VIZIANAGARAM</div>
+        <div>WEST-GODAVARI</div>
+        <div>KADAPA</div>
+      </div>
+      <li>In case of discrepancies please compare the correct name with the district names in the excel sheets</li>
+    </div>
+
+    <div id="troubleshooting" class="section card">
+      <h2>Troubleshooting</h2>
+      <ul>
+        <li><strong>No data after processing:</strong> Check your Excel columns (district name, dates, parameters) and ensure the first sheet contains the data.</li>
+        <li><strong>Missing rows in comparisons:</strong> Confirm your date range and selected sheets include the intended period.</li>
+        <li><strong>District not found:</strong> Verify spelling; normalization should handle common variations.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+    </div>
+  </div>
+</body>
+</html>
+
