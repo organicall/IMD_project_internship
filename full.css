@@ -266,9 +266,9 @@
 
 /* Checkbox Groups */
 .checkbox-group {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   max-height: 200px;
   overflow-y: auto;
   border: 1px solid #ddd;
@@ -337,7 +337,6 @@
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .checkbox-group {
-    grid-template-columns: 1fr;
     max-height: 150px;
   }
   

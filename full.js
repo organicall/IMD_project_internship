@@ -3745,6 +3745,9 @@ function populateSheetDropdowns(type) {
   setTimeout(() => {
     populateForecastCheckboxes(type, forecastCheckboxDiv);
     populateObservationCheckboxes(type, observationCheckboxDiv);
+    
+    // Add summary section after both checkbox groups are populated
+    addSheetSelectionSummary(type);
   }, 100);
 }
 
@@ -3859,29 +3862,7 @@ function populateObservationCheckboxes(type, observationCheckboxDiv) {
     observationCheckboxDiv.appendChild(checkboxItem);
   });
   
-  // Add summary section
-  const summaryDiv = document.createElement('div');
-  summaryDiv.id = `sheetSummary_${type}`;
-  summaryDiv.className = 'sheet-selection-summary';
-  summaryDiv.style.cssText = 'margin-top: 15px; padding: 10px; background-color: #e8f4fd; border: 1px solid #bee5eb; border-radius: 4px; font-size: 13px;';
-  
-  const summaryTitle = document.createElement('strong');
-  summaryTitle.textContent = 'Selected Sheets Summary: ';
-  summaryDiv.appendChild(summaryTitle);
-  
-  const summaryText = document.createElement('span');
-  summaryText.id = `summaryText_${type}`;
-  summaryText.textContent = 'No sheets selected';
-  summaryDiv.appendChild(summaryText);
-  
-  if (type === 'comparison') {
-    document.getElementById('sheetSelectionComparison').appendChild(summaryDiv);
-  } else {
-    document.getElementById('sheetSelectionComprehensive').appendChild(summaryDiv);
-  }
-  
-  // Initialize summary
-  updateSheetSelectionSummary(type);
+
 }
 
 function updateSheetSelectionSummary(type) {
@@ -3986,5 +3967,79 @@ async function loadDataBySheets(forecastSheetsOrOne, observationSheetsOrOne, sta
   } catch (error) {
     console.error('Error loading data by sheets:', error);
     throw error;
+  }
+}
+
+function addSheetSelectionSummary(type) {
+  // Add summary section
+  const summaryDiv = document.createElement('div');
+  summaryDiv.id = `sheetSummary_${type}`;
+  summaryDiv.className = 'sheet-selection-summary';
+  summaryDiv.style.cssText = 'margin-top: 15px; padding: 10px; background-color: #e8f4fd; border: 1px solid #bee5eb; border-radius: 4px; font-size: 13px;';
+  
+  const summaryTitle = document.createElement('strong');
+  summaryTitle.textContent = 'Selected Sheets Summary: ';
+  summaryDiv.appendChild(summaryTitle);
+  
+  const summaryText = document.createElement('span');
+  summaryText.id = `summaryText_${type}`;
+  summaryText.textContent = 'No sheets selected';
+  summaryDiv.appendChild(summaryText);
+  
+  if (type === 'comparison') {
+    document.getElementById('sheetSelectionComparison').appendChild(summaryDiv);
+  } else {
+    document.getElementById('sheetSelectionComprehensive').appendChild(summaryDiv);
+  }
+  
+  // Initialize summary
+  updateSheetSelectionSummary(type);
+}
+
+function updateSheetSelectionSummary(type) {
+  let forecastCheckboxId, observationCheckboxId, summaryTextId;
+  
+  if (type === 'comparison') {
+    forecastCheckboxId = 'forecastSheetCheckboxes';
+    observationCheckboxId = 'observationSheetCheckboxes';
+    summaryTextId = 'summaryText_comparison';
+  } else {
+    forecastCheckboxId = 'forecastSheetCheckboxesComp';
+    observationCheckboxId = 'observationSheetCheckboxesComp';
+    summaryTextId = 'summaryText_comprehensive';
+  }
+  
+  const selectedForecastSheets = Array.from(document.querySelectorAll(`#${forecastCheckboxId} input[type="checkbox"]:checked`)).map(cb => cb.value);
+  const selectedObservationSheets = Array.from(document.querySelectorAll(`#${observationCheckboxId} input[type="checkbox"]:checked`)).map(cb => cb.value);
+  
+  const summaryText = document.getElementById(summaryTextId);
+  
+  if (selectedForecastSheets.length === 0 && selectedObservationSheets.length === 0) {
+    summaryText.textContent = 'No sheets selected';
+    summaryText.style.color = '#dc3545';
+  } else {
+    let summary = '';
+    
+    // Calculate total records for forecast sheets
+    if (selectedForecastSheets.length > 0) {
+      const forecastRecords = selectedForecastSheets.reduce((total, sheetName) => {
+        const sheet = forecastSheets.find(s => s.name === sheetName);
+        return total + (sheet ? sheet.records : 0);
+      }, 0);
+      summary += `Forecast: ${selectedForecastSheets.length} sheet(s) - ${forecastRecords} records`;
+    }
+    
+    // Calculate total records for observation sheets
+    if (selectedObservationSheets.length > 0) {
+      if (summary) summary += ' | ';
+      const observationRecords = selectedObservationSheets.reduce((total, sheetName) => {
+        const sheet = observationSheets.find(s => s.name === sheetName);
+        return total + (sheet ? sheet.records : 0);
+      }, 0);
+      summary += `Observation: ${selectedObservationSheets.length} sheet(s) - ${observationRecords} records`;
+    }
+    
+    summaryText.textContent = summary;
+    summaryText.style.color = '#28a745';
   }
 }
