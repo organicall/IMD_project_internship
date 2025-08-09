@@ -405,3 +405,147 @@
   background-color: #d1ecf1;
   border-color: #a6d8e8;
 }
+
+/* Performance Optimization Styles */
+.data-summary {
+  margin-bottom: 20px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+  font-size: 12px;
+}
+
+.data-table th,
+.data-table td {
+  border: 1px solid #ddd;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.data-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.data-table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.data-table tbody tr:hover {
+  background-color: #f0f0f0;
+}
+
+.pagination-controls {
+  margin: 20px 0;
+  text-align: center;
+}
+
+.pagination-controls .btn-sm {
+  padding: 6px 12px;
+  margin: 0 2px;
+  border: 1px solid #ddd;
+  background: white;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.pagination-controls .btn-sm:hover {
+  background-color: #f8f9fa;
+  border-color: #007bff;
+}
+
+.pagination-controls .btn-sm.active {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+/* Progress indicators for large datasets */
+.progress-container {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 15px;
+  margin: 15px 0;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 20px;
+  background-color: #e9ecef;
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 10px 0;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #007bff, #0056b3);
+  transition: width 0.3s ease;
+  border-radius: 10px;
+}
+
+.progress-text {
+  text-align: center;
+  font-size: 14px;
+  color: #495057;
+  margin-top: 5px;
+}
+
+/* Loading states for large operations */
+.loading-large {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  margin: 15px 0;
+}
+
+.loading-large::before {
+  content: "⏳";
+  margin-right: 10px;
+  animation: spin 1s linear infinite;
+}
+
+/* Memory management warning */
+.memory-warning {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  color: #856404;
+  padding: 10px;
+  border-radius: 6px;
+  margin: 10px 0;
+  font-size: 13px;
+}
+
+.memory-warning strong {
+  color: #856404;
+}
+
+/* Responsive table adjustments */
+@media (max-width: 768px) {
+  .data-table {
+    font-size: 11px;
+  }
+  
+  .data-table th,
+  .data-table td {
+    padding: 4px 6px;
+  }
+  
+  .pagination-controls .btn-sm {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+}

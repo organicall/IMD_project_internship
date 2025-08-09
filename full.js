@@ -675,7 +675,7 @@ function validateObservationSheetName() {
     validationDiv.style.display = "none";
     saveBtn.disabled = processedObservationOutput.length === 0;
     return true;
-  }
+}
 
 // Handle file upload
 function initForecastWorker() {
@@ -944,8 +944,27 @@ async function processForecast() {
     return;
   }
 
-  showStatus('🔄 Processing forecast allocation...', 'info');
+  // Show memory warning for large datasets
+  if (forecastRows.length > 10000) {
+    const warning = document.createElement('div');
+    warning.className = 'memory-warning';
+    warning.innerHTML = `
+      <strong>⚠️ Large Dataset Detected:</strong> 
+      Processing ${forecastRows.length.toLocaleString()} records. 
+      This may take several minutes. The browser will remain responsive.
+    `;
+    document.getElementById('loadingIndicator').insertAdjacentElement('beforebegin', warning);
+  }
+
+  showStatus(`🔄 Processing ${forecastRows.length.toLocaleString()} forecast records...`, 'info');
   document.getElementById('loadingIndicator').classList.add('show');
+  
+  // Create progress indicator for large datasets
+  let progressContainer = null;
+  if (forecastRows.length > 5000) {
+    progressContainer = createProgressIndicator('Processing forecast data...');
+    document.getElementById('loadingIndicator').insertAdjacentElement('beforebegin', progressContainer);
+  }
 
   try {
     const holidaysInput = document.getElementById('holidayInput').value;
@@ -989,6 +1008,13 @@ const holidays = holidaysInput
       const row = forecastRows[i];
       const key = `${row.district_name}|${row.forecast_date_key}`;
       dataLookup[key] = row; // Keep the latest entry for each district-date combination
+      
+      // Update progress for large datasets
+      if (progressContainer && i % lookupBatch === 0) {
+        const progress = Math.round((i / forecastRows.length) * 50); // First 50% of progress
+        updateProgressIndicator(progressContainer, progress, 'Creating data lookup...');
+      }
+      
       if (i % lookupBatch === 0 && i > 0) {
         // Yield to the UI
         await new Promise(r => setTimeout(r, 0));
@@ -2958,8 +2984,8 @@ async function performComprehensiveAnalysis() {
       parameters: parameters,
       useDateRange: useDateRange,
       useSpecificSheets: useSpecificSheets,
-        forecastSheet: useSpecificSheets ? document.getElementById('forecastSheetSelectionComp').value : null,
-        observationSheet: useSpecificSheets ? document.getElementById('observationSheetSelectionComp').value : null,
+        forecastSheets: useSpecificSheets ? validateSheetSelection('comprehensive').forecastSheets : null,
+        observationSheets: useSpecificSheets ? validateSheetSelection('comprehensive').observationSheets : null,
       startDate: startDate,
       endDate: endDate
     };
@@ -3865,54 +3891,6 @@ function populateObservationCheckboxes(type, observationCheckboxDiv) {
 
 }
 
-function updateSheetSelectionSummary(type) {
-  let forecastCheckboxId, observationCheckboxId, summaryTextId;
-  
-  if (type === 'comparison') {
-    forecastCheckboxId = 'forecastSheetCheckboxes';
-    observationCheckboxId = 'observationSheetCheckboxes';
-    summaryTextId = 'summaryText_comparison';
-  } else {
-    forecastCheckboxId = 'forecastSheetCheckboxesComp';
-    observationCheckboxId = 'observationSheetCheckboxesComp';
-    summaryTextId = 'summaryText_comprehensive';
-  }
-  
-  const selectedForecastSheets = Array.from(document.querySelectorAll(`#${forecastCheckboxId} input[type="checkbox"]:checked`)).map(cb => cb.value);
-  const selectedObservationSheets = Array.from(document.querySelectorAll(`#${observationCheckboxId} input[type="checkbox"]:checked`)).map(cb => cb.value);
-  
-  const summaryText = document.getElementById(summaryTextId);
-  
-  if (selectedForecastSheets.length === 0 && selectedObservationSheets.length === 0) {
-    summaryText.textContent = 'No sheets selected';
-    summaryText.style.color = '#dc3545';
-  } else {
-    let summary = '';
-    
-    // Calculate total records for forecast sheets
-    if (selectedForecastSheets.length > 0) {
-      const forecastRecords = selectedForecastSheets.reduce((total, sheetName) => {
-        const sheet = forecastSheets.find(s => s.name === sheetName);
-        return total + (sheet ? sheet.records : 0);
-      }, 0);
-      summary += `Forecast: ${selectedForecastSheets.length} sheet(s) - ${forecastRecords} records`;
-    }
-    
-    // Calculate total records for observation sheets
-    if (selectedObservationSheets.length > 0) {
-      if (summary) summary += ' | ';
-      const observationRecords = selectedObservationSheets.reduce((total, sheetName) => {
-        const sheet = observationSheets.find(s => s.name === sheetName);
-        return total + (sheet ? sheet.records : 0);
-      }, 0);
-      summary += `Observation: ${selectedObservationSheets.length} sheet(s) - ${observationRecords} records`;
-    }
-    
-    summaryText.textContent = summary;
-    summaryText.style.color = '#28a745';
-  }
-}
-
 function validateSheetSelection(type) {
   let forecastCheckboxId, observationCheckboxId;
   
@@ -4043,3 +4021,1247 @@ function updateSheetSelectionSummary(type) {
     summaryText.style.color = '#28a745';
   }
 }
+
+// Performance optimization for large datasets
+const CHUNK_SIZE = 1000; // Process 1000 records at a time
+const RENDER_LIMIT = 5000; // Only render first 5000 rows in table
+const MAX_MEMORY_THRESHOLD = 50000000; // 50MB memory threshold
+const STREAMING_CHUNK_SIZE = 500; // Smaller chunks for streaming
+const CACHE_SIZE_LIMIT = 10000; // Maximum records to keep in memory cache
+
+async function processLargeDataset(data, processFunction, progressCallback = null) {
+  const totalRecords = data.length;
+  const chunks = Math.ceil(totalRecords / CHUNK_SIZE);
+  let processedRecords = 0;
+  
+  if (progressCallback) {
+    progressCallback(0, totalRecords, 'Starting processing...');
+  }
+  
+  const results = [];
+  
+  for (let i = 0; i < chunks; i++) {
+    const start = i * CHUNK_SIZE;
+    const end = Math.min(start + CHUNK_SIZE, totalRecords);
+    const chunk = data.slice(start, end);
+    
+    // Process chunk
+    const chunkResults = await processFunction(chunk, i);
+    results.push(...chunkResults);
+    
+    processedRecords += chunk.length;
+    
+    if (progressCallback) {
+      const progress = Math.round((processedRecords / totalRecords) * 100);
+      progressCallback(progress, totalRecords, `Processed ${processedRecords}/${totalRecords} records...`);
+    }
+    
+    // Allow UI to update by yielding control
+    await new Promise(resolve => setTimeout(resolve, 0));
+  }
+  
+  if (progressCallback) {
+    progressCallback(100, totalRecords, 'Processing complete!');
+  }
+  
+  return results;
+}
+
+function createVirtualTable(data, containerId, maxVisibleRows = 100) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
+  container.innerHTML = '';
+  
+  if (data.length === 0) {
+    container.innerHTML = '<p>No data to display</p>';
+    return;
+  }
+  
+  // Show data summary
+  const summary = document.createElement('div');
+  summary.className = 'data-summary';
+  summary.innerHTML = `
+    <div style="background: #e8f4fd; padding: 10px; border-radius: 6px; margin-bottom: 15px;">
+      <strong>📊 Data Summary:</strong> ${data.length.toLocaleString()} total records
+      ${data.length > maxVisibleRows ? `(showing first ${maxVisibleRows.toLocaleString()} rows)` : ''}
+    </div>
+  `;
+  container.appendChild(summary);
+  
+  // Create table with limited rows
+  const table = document.createElement('table');
+  table.className = 'data-table';
+  
+  // Create header
+  const thead = document.createElement('thead');
+  const headerRow = document.createElement('tr');
+  const headers = Object.keys(data[0] || {});
+  
+  headers.forEach(header => {
+    const th = document.createElement('th');
+    th.textContent = header.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    th.style.cssText = 'padding: 8px; border: 1px solid #ddd; background: #f8f9fa; font-weight: 600;';
+    headerRow.appendChild(th);
+  });
+  
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+  
+  // Create body with limited rows
+  const tbody = document.createElement('tbody');
+  const rowsToShow = Math.min(data.length, maxVisibleRows);
+  
+  for (let i = 0; i < rowsToShow; i++) {
+    const row = document.createElement('tr');
+    headers.forEach(header => {
+      const td = document.createElement('td');
+      td.textContent = formatValue(data[i][header]);
+      td.style.cssText = 'padding: 6px; border: 1px solid #ddd; font-size: 12px;';
+      row.appendChild(td);
+    });
+    tbody.appendChild(row);
+  }
+  
+  table.appendChild(tbody);
+  container.appendChild(table);
+  
+  // Add pagination controls if needed
+  if (data.length > maxVisibleRows) {
+    const pagination = createPaginationControls(data.length, maxVisibleRows, (page) => {
+      showTablePage(data, tbody, page, maxVisibleRows, headers);
+    });
+    container.appendChild(pagination);
+  }
+  
+  // Add export button
+  const exportBtn = document.createElement('button');
+  exportBtn.className = 'btn';
+  exportBtn.textContent = '📁 Export All Data';
+  exportBtn.onclick = () => exportLargeDataset(data);
+  exportBtn.style.cssText = 'margin-top: 15px;';
+  container.appendChild(exportBtn);
+}
+
+function showTablePage(data, tbody, page, pageSize, headers) {
+  const start = page * pageSize;
+  const end = Math.min(start + pageSize, data.length);
+  
+  tbody.innerHTML = '';
+  
+  for (let i = start; i < end; i++) {
+    const row = document.createElement('tr');
+    headers.forEach(header => {
+      const td = document.createElement('td');
+      td.textContent = formatValue(data[i][header]);
+      td.style.cssText = 'padding: 6px; border: 1px solid #ddd; font-size: 12px;';
+      row.appendChild(td);
+    });
+    tbody.appendChild(row);
+  }
+}
+
+function createPaginationControls(totalRecords, pageSize, onPageChange) {
+  const totalPages = Math.ceil(totalRecords / pageSize);
+  const container = document.createElement('div');
+  container.className = 'pagination-controls';
+  container.style.cssText = 'margin-top: 15px; text-align: center;';
+  
+  const info = document.createElement('div');
+  info.style.cssText = 'margin-bottom: 10px; color: #666; font-size: 14px;';
+  info.textContent = `Page 1 of ${totalPages} (${totalRecords.toLocaleString()} total records)`;
+  container.appendChild(info);
+  
+  const controls = document.createElement('div');
+  controls.style.cssText = 'display: flex; justify-content: center; gap: 5px;';
+  
+  // Previous button
+  const prevBtn = document.createElement('button');
+  prevBtn.textContent = '← Previous';
+  prevBtn.className = 'btn btn-sm';
+  prevBtn.onclick = () => {
+    const currentPage = Math.max(0, parseInt(info.dataset.currentPage || 1) - 2);
+    onPageChange(currentPage);
+    updatePaginationInfo(info, currentPage + 1, totalPages);
+  };
+  controls.appendChild(prevBtn);
+  
+  // Page numbers
+  for (let i = 1; i <= Math.min(totalPages, 10); i++) {
+    const pageBtn = document.createElement('button');
+    pageBtn.textContent = i;
+    pageBtn.className = 'btn btn-sm';
+    pageBtn.style.cssText = i === 1 ? 'background: #007bff; color: white;' : '';
+    pageBtn.onclick = () => {
+      onPageChange(i - 1);
+      updatePaginationInfo(info, i, totalPages);
+      // Update button styles
+      controls.querySelectorAll('button').forEach(btn => {
+        if (btn !== pageBtn && btn !== prevBtn) {
+          btn.style.cssText = '';
+        }
+      });
+      pageBtn.style.cssText = 'background: #007bff; color: white;';
+    };
+    controls.appendChild(pageBtn);
+  }
+  
+  // Next button
+  const nextBtn = document.createElement('button');
+  nextBtn.textContent = 'Next →';
+  nextBtn.className = 'btn btn-sm';
+  nextBtn.onclick = () => {
+    const currentPage = Math.min(totalPages - 1, parseInt(info.dataset.currentPage || 1));
+    onPageChange(currentPage);
+    updatePaginationInfo(info, currentPage + 1, totalPages);
+  };
+  controls.appendChild(nextBtn);
+  
+  container.appendChild(controls);
+  
+  // Store current page info
+  info.dataset.currentPage = '1';
+  
+  return container;
+}
+
+function updatePaginationInfo(infoElement, currentPage, totalPages) {
+  infoElement.textContent = `Page ${currentPage} of ${totalPages}`;
+  infoElement.dataset.currentPage = currentPage.toString();
+}
+
+async function exportLargeDataset(data) {
+  try {
+    showStatus('📊 Preparing export for large dataset...', 'info');
+    
+    // Use Web Worker for large exports to prevent freezing
+    if (data.length > 10000) {
+      await exportWithWorker(data);
+    } else {
+      await exportToExcel(data);
+    }
+    
+    showStatus('✅ Export completed successfully!', 'success');
+  } catch (error) {
+    console.error('Export error:', error);
+    showStatus('❌ Export failed: ' + error.message, 'error');
+  }
+}
+
+async function exportWithWorker(data) {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(URL.createObjectURL(new Blob([`
+      self.onmessage = function(e) {
+        const { data, filename } = e.data;
+        
+        try {
+          // Convert data to CSV
+          const csv = convertToCSV(data);
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          
+          // Create download link
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = filename;
+          link.click();
+          
+          self.postMessage({ success: true });
+        } catch (error) {
+          self.postMessage({ success: false, error: error.message });
+        }
+      };
+      
+      function convertToCSV(data) {
+        if (data.length === 0) return '';
+        
+        const headers = Object.keys(data[0]);
+        const csvRows = [headers.join(',')];
+        
+        for (const row of data) {
+          const values = headers.map(header => {
+            const value = row[header];
+            return typeof value === 'string' && value.includes(',') ? '"' + value + '"' : value;
+          });
+          csvRows.push(values.join(','));
+        }
+        
+        return csvRows.join('\\n');
+      }
+    `], { type: 'application/javascript' })));
+    
+    worker.onmessage = function(e) {
+      if (e.data.success) {
+        resolve();
+      } else {
+        reject(new Error(e.data.error));
+      }
+      worker.terminate();
+    };
+    
+    worker.onerror = function(error) {
+      reject(error);
+      worker.terminate();
+    };
+    
+    const filename = `export_${new Date().toISOString().split('T')[0]}.csv`;
+    worker.postMessage({ data, filename });
+  });
+}
+
+// Progress indicator functions for large dataset processing
+function createProgressIndicator(message) {
+  const container = document.createElement('div');
+  container.className = 'progress-container';
+  
+  const title = document.createElement('div');
+  title.textContent = message;
+  title.style.cssText = 'font-weight: 600; margin-bottom: 10px; color: #495057;';
+  
+  const progressBar = document.createElement('div');
+  progressBar.className = 'progress-bar';
+  
+  const progressFill = document.createElement('div');
+  progressFill.className = 'progress-fill';
+  progressFill.style.width = '0%';
+  
+  const progressText = document.createElement('div');
+  progressText.className = 'progress-text';
+  progressText.textContent = '0%';
+  
+  progressBar.appendChild(progressFill);
+  container.appendChild(title);
+  container.appendChild(progressBar);
+  container.appendChild(progressText);
+  
+  // Store references for updates
+  container.progressFill = progressFill;
+  container.progressText = progressText;
+  
+  return container;
+}
+
+function updateProgressIndicator(container, percentage, message = '') {
+  if (!container || !container.progressFill || !container.progressText) return;
+  
+  container.progressFill.style.width = `${percentage}%`;
+  container.progressText.textContent = `${percentage}%`;
+  
+  if (message) {
+    container.querySelector('div').textContent = message;
+  }
+}
+
+function removeProgressIndicator(container) {
+  if (container && container.parentNode) {
+    container.parentNode.removeChild(container);
+  }
+}
+
+// Memory management and optimization
+
+// Memory management and optimization
+class MemoryManager {
+  constructor() {
+    this.cache = new Map();
+    this.memoryUsage = 0;
+    this.lastCleanup = Date.now();
+  }
+
+  // Estimate memory usage of an object
+  estimateMemoryUsage(obj) {
+    const str = JSON.stringify(obj);
+    return new Blob([str]).size;
+  }
+
+  // Add data to cache with memory management
+  addToCache(key, data) {
+    const memoryUsage = this.estimateMemoryUsage(data);
+    
+    // Check if adding this would exceed memory threshold
+    if (this.memoryUsage + memoryUsage > MAX_MEMORY_THRESHOLD) {
+      this.performCleanup();
+    }
+    
+    // If still too much memory, remove oldest entries
+    if (this.memoryUsage + memoryUsage > MAX_MEMORY_THRESHOLD) {
+      this.removeOldestEntries();
+    }
+    
+    this.cache.set(key, {
+      data: data,
+      timestamp: Date.now(),
+      memoryUsage: memoryUsage
+    });
+    
+    this.memoryUsage += memoryUsage;
+  }
+
+  // Get data from cache
+  getFromCache(key) {
+    const cached = this.cache.get(key);
+    if (cached) {
+      // Update timestamp for LRU behavior
+      cached.timestamp = Date.now();
+      return cached.data;
+    }
+    return null;
+  }
+
+  // Remove oldest cache entries
+  removeOldestEntries() {
+    const entries = Array.from(this.cache.entries());
+    entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+    
+    for (const [key, value] of entries) {
+      this.cache.delete(key);
+      this.memoryUsage -= value.memoryUsage;
+      
+      if (this.memoryUsage < MAX_MEMORY_THRESHOLD * 0.7) {
+        break; // Stop when we're well below threshold
+      }
+    }
+  }
+
+  // Perform periodic cleanup
+  performCleanup() {
+    const now = Date.now();
+    if (now - this.lastCleanup > 30000) { // Cleanup every 30 seconds
+      this.removeOldestEntries();
+      this.lastCleanup = now;
+    }
+  }
+
+  // Clear all cache
+  clearCache() {
+    this.cache.clear();
+    this.memoryUsage = 0;
+  }
+
+  // Get cache statistics
+  getCacheStats() {
+    return {
+      size: this.cache.size,
+      memoryUsage: this.memoryUsage,
+      maxMemory: MAX_MEMORY_THRESHOLD
+    };
+  }
+}
+
+// Initialize memory manager
+const memoryManager = new MemoryManager();
+
+// Enhanced streaming data processor for very large datasets
+class StreamingDataProcessor {
+  constructor() {
+    this.processors = new Map();
+    this.isProcessing = false;
+  }
+
+  // Register a data processor
+  registerProcessor(name, processor) {
+    this.processors.set(name, processor);
+  }
+
+  // Process data in streaming fashion
+  async processStreaming(data, processorName, options = {}) {
+    const processor = this.processors.get(processorName);
+    if (!processor) {
+      throw new Error(`Processor '${processorName}' not found`);
+    }
+
+    const {
+      chunkSize = STREAMING_CHUNK_SIZE,
+      progressCallback = null,
+      memoryOptimization = true
+    } = options;
+
+    const totalRecords = data.length;
+    const chunks = Math.ceil(totalRecords / chunkSize);
+    let processedRecords = 0;
+    let results = [];
+
+    if (progressCallback) {
+      progressCallback(0, totalRecords, 'Starting streaming processing...');
+    }
+
+    // Process data in small chunks to minimize memory usage
+    for (let i = 0; i < chunks; i++) {
+      const start = i * chunkSize;
+      const end = Math.min(start + chunkSize, totalRecords);
+      const chunk = data.slice(start, end);
+
+      try {
+        // Process chunk
+        const chunkResults = await processor(chunk, i, {
+          totalChunks: chunks,
+          currentChunk: i,
+          isLastChunk: i === chunks - 1
+        });
+
+        results.push(...chunkResults);
+        processedRecords += chunk.length;
+
+        // Memory optimization: clear chunk from memory
+        if (memoryOptimization) {
+          chunk.length = 0;
+        }
+
+        if (progressCallback) {
+          const progress = Math.round((processedRecords / totalRecords) * 100);
+          progressCallback(progress, totalRecords, 
+            `Processed ${processedRecords.toLocaleString()}/${totalRecords.toLocaleString()} records...`);
+        }
+
+        // Allow UI to update and prevent blocking
+        await new Promise(resolve => setTimeout(resolve, 10));
+
+        // Check memory usage and perform cleanup if needed
+        if (memoryOptimization && i % 10 === 0) {
+          memoryManager.performCleanup();
+        }
+
+      } catch (error) {
+        console.error(`Error processing chunk ${i}:`, error);
+        throw error;
+      }
+    }
+
+    if (progressCallback) {
+      progressCallback(100, totalRecords, 'Streaming processing complete!');
+    }
+
+    return results;
+  }
+
+  // Stop processing
+  stop() {
+    this.isProcessing = false;
+  }
+}
+
+// Initialize streaming processor
+const streamingProcessor = new StreamingDataProcessor();
+
+// Register built-in processors
+streamingProcessor.registerProcessor('comparison', async (chunk, chunkIndex, context) => {
+  // Process comparison data chunk
+  const results = [];
+  
+  for (const row of chunk) {
+    // Process each row for comparison
+    const processed = await processComparisonRow(row);
+    if (processed) {
+      results.push(processed);
+    }
+  }
+  
+  return results;
+});
+
+streamingProcessor.registerProcessor('comprehensive', async (chunk, chunkIndex, context) => {
+  // Process comprehensive analysis chunk
+  const results = [];
+  
+  for (const row of chunk) {
+    // Process each row for comprehensive analysis
+    const processed = await processComprehensiveRow(row);
+    if (processed) {
+      results.push(processed);
+    }
+  }
+  
+  return results;
+});
+
+// Helper function to process comparison row
+async function processComparisonRow(row) {
+  // Add your comparison logic here
+  return row;
+}
+
+// Helper function to process comprehensive row
+async function processComprehensiveRow(row) {
+  // Add your comprehensive analysis logic here
+  return row;
+}
+
+// Enhanced large dataset processing with memory management
+async function processLargeDatasetOptimized(data, processFunction, options = {}) {
+  const {
+    useStreaming = false,
+    chunkSize = CHUNK_SIZE,
+    progressCallback = null,
+    memoryOptimization = true,
+    processorName = null
+  } = options;
+
+  // Check if we should use streaming for very large datasets
+  if (useStreaming && data.length > 50000) {
+    if (!processorName) {
+      throw new Error('Processor name required for streaming mode');
+    }
+    
+    return await streamingProcessor.processStreaming(data, processorName, {
+      chunkSize: STREAMING_CHUNK_SIZE,
+      progressCallback,
+      memoryOptimization
+    });
+  }
+
+  // Use traditional chunked processing for smaller datasets
+  return await processLargeDataset(data, processFunction, progressCallback);
+}
+
+// Data compression and optimization utilities
+class DataOptimizer {
+  // Compress data by removing unnecessary fields and optimizing structure
+  static compressData(data, fieldsToKeep = null) {
+    if (!Array.isArray(data) || data.length === 0) return data;
+
+    const sample = data[0];
+    const fields = fieldsToKeep || Object.keys(sample);
+    
+    return data.map(row => {
+      const compressed = {};
+      for (const field of fields) {
+        if (row.hasOwnProperty(field)) {
+          compressed[field] = row[field];
+        }
+      }
+      return compressed;
+    });
+  }
+
+  // Optimize data types for better memory usage
+  static optimizeDataTypes(data) {
+    if (!Array.isArray(data) || data.length === 0) return data;
+
+    return data.map(row => {
+      const optimized = {};
+      for (const [key, value] of Object.entries(row)) {
+        if (typeof value === 'string' && value.length > 0) {
+          // Convert short strings to more efficient format
+          optimized[key] = value;
+        } else if (typeof value === 'number') {
+          // Keep numbers as is
+          optimized[key] = value;
+        } else if (value === null || value === undefined) {
+          // Remove null/undefined values
+          continue;
+        } else {
+          optimized[key] = value;
+        }
+      }
+      return optimized;
+    });
+  }
+
+  // Create data index for faster lookups
+  static createIndex(data, keyField) {
+    const index = new Map();
+    
+    for (let i = 0; i < data.length; i++) {
+      const key = data[i][keyField];
+      if (key !== undefined && key !== null) {
+        if (!index.has(key)) {
+          index.set(key, []);
+        }
+        index.get(key).push(i);
+      }
+    }
+    
+    return index;
+  }
+
+  // Filter data efficiently using index
+  static filterWithIndex(data, index, keyValue) {
+    const indices = index.get(keyValue);
+    if (!indices) return [];
+    
+    return indices.map(i => data[i]);
+  }
+}
+
+// Enhanced data loading with memory management
+async function loadDataBySheetsOptimized(forecastSheetsOrOne, observationSheetsOrOne, startDate = null, endDate = null, options = {}) {
+  const {
+    useCache = true,
+    compressData = true,
+    optimizeTypes = true,
+    maxRecords = null
+  } = options;
+
+  try {
+    // Check cache first
+    const cacheKey = `sheets_${JSON.stringify(forecastSheetsOrOne)}_${JSON.stringify(observationSheetsOrOne)}_${startDate}_${endDate}`;
+    
+    if (useCache) {
+      const cached = memoryManager.getFromCache(cacheKey);
+      if (cached) {
+        console.log('Using cached data');
+        return cached;
+      }
+    }
+
+    let forecastQuery = client.from('full_forecast').select('*');
+    let observationQuery = client.from('full_observation').select('*');
+    
+    // Apply sheet filters if specified
+    const forecastSheets = Array.isArray(forecastSheetsOrOne) ? forecastSheetsOrOne : (forecastSheetsOrOne ? [forecastSheetsOrOne] : []);
+    const observationSheets = Array.isArray(observationSheetsOrOne) ? observationSheetsOrOne : (observationSheetsOrOne ? [observationSheetsOrOne] : []);
+    
+    if (forecastSheets.length > 0) {
+      forecastQuery = forecastQuery.in('sheet_name', forecastSheets);
+    }
+    if (observationSheets.length > 0) {
+      observationQuery = observationQuery.in('sheet_name', observationSheets);
+    }
+    
+    // Apply date range filters if specified
+    if (startDate && endDate) {
+      forecastQuery = forecastQuery.gte('forecast_date', startDate).lte('forecast_date', endDate);
+      observationQuery = observationQuery.gte('observation_date', startDate).lte('observation_date', endDate);
+    }
+
+    // Apply record limit if specified
+    if (maxRecords) {
+      forecastQuery = forecastQuery.limit(maxRecords);
+      observationQuery = observationQuery.limit(maxRecords);
+    }
+
+    // Execute queries with pagination to fetch all rows
+    const [forecastData, observationData] = await Promise.all([
+      fetchAllRows(forecastQuery, 'forecast_date', true),
+      fetchAllRows(observationQuery, 'observation_date', true)
+    ]);
+
+    let result = { forecastData, observationData };
+
+    // Optimize data if requested
+    if (compressData) {
+      result.forecastData = DataOptimizer.compressData(result.forecastData);
+      result.observationData = DataOptimizer.compressData(result.observationData);
+    }
+
+    if (optimizeTypes) {
+      result.forecastData = DataOptimizer.optimizeDataTypes(result.forecastData);
+      result.observationData = DataOptimizer.optimizeDataTypes(result.observationData);
+    }
+
+    // Cache the result
+    if (useCache) {
+      memoryManager.addToCache(cacheKey, result);
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Error loading data by sheets:', error);
+    throw error;
+  }
+}
+
+// Memory usage monitoring
+function monitorMemoryUsage() {
+  if ('memory' in performance) {
+    const memoryInfo = performance.memory;
+    const usedMB = Math.round(memoryInfo.usedJSHeapSize / 1024 / 1024);
+    const totalMB = Math.round(memoryInfo.totalJSHeapSize / 1024 / 1024);
+    const limitMB = Math.round(memoryInfo.jsHeapSizeLimit / 1024 / 1024);
+    
+    console.log(`Memory Usage: ${usedMB}MB / ${totalMB}MB (Limit: ${limitMB}MB)`);
+    
+    // Show warning if memory usage is high
+    if (usedMB > limitMB * 0.8) {
+      showMemoryWarning(usedMB, limitMB);
+    }
+    
+    return { used: usedMB, total: totalMB, limit: limitMB };
+  }
+  return null;
+}
+
+// Show memory warning
+function showMemoryWarning(used, limit) {
+  const warningDiv = document.createElement('div');
+  warningDiv.className = 'memory-warning';
+  warningDiv.innerHTML = `
+    <strong>⚠️ Memory Warning:</strong> 
+    High memory usage detected (${used}MB / ${limit}MB). 
+    Consider processing smaller datasets or clearing cache.
+    <button onclick="this.parentElement.remove()" style="float: right; background: none; border: none; color: #721c24; cursor: pointer;">×</button>
+  `;
+  
+  // Insert at top of page
+  const container = document.querySelector('.container') || document.body;
+  container.insertBefore(warningDiv, container.firstChild);
+  
+  // Auto-remove after 10 seconds
+  setTimeout(() => {
+    if (warningDiv.parentElement) {
+      warningDiv.parentElement.removeChild(warningDiv);
+    }
+  }, 10000);
+}
+
+// Enhanced comprehensive analysis with large dataset support
+async function performComprehensiveAnalysisOptimized() {
+  const day = document.getElementById('comprehensiveDay').value;
+  const useDateRange = document.getElementById('useDateRangeComprehensive').checked;
+  const useSpecificSheets = document.getElementById('useSpecificSheetsComprehensive').checked;
+  const startDate = document.getElementById('comprehensiveStartDate').value;
+  const endDate = document.getElementById('comprehensiveEndDate').value;
+  
+  if (!day) {
+    showComprehensiveStatus('❌ Please select a day for analysis.', 'error');
+    return;
+  }
+
+  let allForecastData, allObservationData;
+
+  try {
+    if (useSpecificSheets) {
+      // Use specific sheets
+      const sheetSelection = validateSheetSelection('comprehensive');
+      
+      if (!sheetSelection.isValid) {
+        if (sheetSelection.forecastCount === 0) {
+          showComprehensiveStatus('❌ Please select at least one forecast sheet.', 'error');
+        } else {
+          showComprehensiveStatus('❌ Please select at least one observation sheet.', 'error');
+        }
+        return;
+      }
+      
+      const forecastSheets = sheetSelection.forecastSheets;
+      const observationSheets = sheetSelection.observationSheets;
+      
+      showComprehensiveStatus('🔍 Loading data from selected sheets...', 'info');
+      
+      const dateRangeStart = useDateRange ? startDate : null;
+      const dateRangeEnd = useDateRange ? endDate : null;
+      
+      if (useDateRange) {
+        const validation = validateDateRange(startDate, endDate);
+        if (!validation.valid) {
+          showComprehensiveStatus('❌ ' + validation.message, 'error');
+          return;
+        }
+      }
+      
+      // Use optimized data loading
+      const { forecastData: dbForecastData, observationData: dbObservationData } = 
+        await loadDataBySheetsOptimized(forecastSheets, observationSheets, dateRangeStart, dateRangeEnd, {
+          useCache: true,
+          compressData: true,
+          optimizeTypes: true
+        });
+      
+      allForecastData = dbForecastData;
+      allObservationData = dbObservationData;
+      
+    } else if (useDateRange) {
+      // Use date range with all data
+      const validation = validateDateRange(startDate, endDate);
+      if (!validation.valid) {
+        showComprehensiveStatus('❌ ' + validation.message, 'error');
+        return;
+      }
+
+      showComprehensiveStatus('🔍 Loading data from database for date range...', 'info');
+
+      [allForecastData, allObservationData] = await Promise.all([
+        loadForecastDataByDateRange(startDate, endDate),
+        loadObservationDataByDateRange(startDate, endDate)
+      ]);
+
+    } else {
+      // Use existing processed data
+      if (processedOutput.length === 0) {
+        showComprehensiveStatus('❌ No forecast data available. Please process forecast data first or enable date range/sheet selection.', 'error');
+        return;
+      }
+
+      if (processedObservationOutput.length === 0) {
+        showComprehensiveStatus('❌ No observation data available. Please process observation data first or enable date range/sheet selection.', 'error');
+        return;
+      }
+
+      allForecastData = processedOutput;
+      allObservationData = processedObservationOutput;
+    }
+
+    // Check data size and use appropriate processing method
+    const totalRecords = allForecastData.length + allObservationData.length;
+    const useStreaming = totalRecords > 50000;
+    
+    if (useStreaming) {
+      showComprehensiveStatus('🔍 Large dataset detected. Using streaming analysis...', 'info');
+    }
+
+    showComprehensiveStatus('🔍 Performing comprehensive analysis for all districts and parameters...', 'info');
+
+    const dayNumber = parseInt(day.replace('Day', ''));
+    const results = [];
+    
+    // Get all unique districts from the data
+    const allDistricts = [...new Set(allForecastData.map(row => row.district_name))];
+    const parameters = Object.keys(parameterNames);
+    
+    // Create progress indicator for large datasets
+    let progressContainer = null;
+    if (totalRecords > 10000) {
+      progressContainer = createProgressIndicator('Processing comprehensive analysis...');
+      document.getElementById('comprehensiveResultsSection').appendChild(progressContainer);
+    }
+    
+    let processedDistricts = 0;
+    
+    // For each district, analyze all parameters
+    for (const district of allDistricts) {
+      const districtResult = {
+        district: district,
+        parameters: {}
+      };
+      
+      for (const parameter of parameters) {
+        // Filter forecast data for this district and day
+        const forecastData = allForecastData.filter(row => 
+          normalizeDistrictName(row.district_name) === normalizeDistrictName(district) &&
+          row.day_number === dayNumber
+        );
+
+        // Filter observation data for this district and day
+        const observationData = allObservationData.filter(row => 
+          normalizeDistrictName(row.district_name) === normalizeDistrictName(district) &&
+          row.day_number === dayNumber
+        );
+
+        if (forecastData.length > 0 && observationData.length > 0) {
+          // Create comparison data for this parameter
+          const comparisonData = createComparisonData(forecastData, observationData, parameter);
+          const statistics = calculateStatistics(comparisonData, parameter);
+          
+          if (statistics.isRainfall) {
+            districtResult.parameters[parameter] = {
+              correct: statistics.correct,
+              usable: statistics.usable,
+              unusable: 0,
+              correctPlusUsable: statistics.correct + statistics.usable,
+              validDays: statistics.validDays,
+              missingDays: statistics.missingDays,
+              YY: statistics.YY,
+              YN: statistics.YN,
+              NY: statistics.NY,
+              NN: statistics.NN,
+              matchingCases: statistics.matchingCases,
+              isRainfall: true
+            };
+          } else {
+            districtResult.parameters[parameter] = {
+              correct: statistics.correct,
+              usable: statistics.usable,
+              unusable: statistics.unusable,
+              correctPlusUsable: statistics.correct + statistics.usable,
+              validDays: statistics.validDays,
+              missingDays: statistics.missingDays,
+              n1: statistics.n1,
+              n2: statistics.n2,
+              n3: statistics.n3,
+              threshold1: statistics.threshold1,
+              threshold2: statistics.threshold2,
+              useN11ForUnusable: statistics.useN11ForUnusable,
+              isRainfall: false
+            };
+          }
+        } else {
+          // No data available
+          districtResult.parameters[parameter] = {
+            correct: 0,
+            usable: 0,
+            unusable: 0,
+            correctPlusUsable: 0,
+            validDays: 0,
+            missingDays: 0,
+            isRainfall: parameter === 'rainfall'
+          };
+        }
+      }
+      
+      results.push(districtResult);
+      processedDistricts++;
+      
+      // Update progress for large datasets
+      if (progressContainer && totalRecords > 10000) {
+        const progress = Math.round((processedDistricts / allDistricts.length) * 100);
+        updateProgressIndicator(progressContainer, progress, 
+          `Processed ${processedDistricts}/${allDistricts.length} districts...`);
+      }
+      
+      // Allow UI to update for large datasets
+      if (totalRecords > 10000 && processedDistricts % 5 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+    }
+
+    // Calculate state-wide averages
+    const stateAverages = calculateStateAverages(results, parameters);   
+    
+    comprehensiveResults = {
+      day: day,
+      districts: results,
+      stateAverages: stateAverages,
+      parameters: parameters,
+      useDateRange: useDateRange,
+      useSpecificSheets: useSpecificSheets,
+      forecastSheets: useSpecificSheets ? validateSheetSelection('comprehensive').forecastSheets : null,
+      observationSheets: useSpecificSheets ? validateSheetSelection('comprehensive').observationSheets : null,
+      startDate: startDate,
+      endDate: endDate,
+      totalRecords: totalRecords,
+      processingMethod: useStreaming ? 'streaming' : 'standard'
+    };
+
+    // Display results
+    displayComprehensiveResults(comprehensiveResults);
+    
+    document.getElementById('comprehensiveResultsSection').style.display = 'block';
+    
+    // Remove progress indicator
+    if (progressContainer) {
+      removeProgressIndicator(progressContainer);
+    }
+    
+    const analysisType = useSpecificSheets ? 'specific sheets' : useDateRange ? `date range (${startDate} to ${endDate})` : 'processed data';
+    const methodInfo = useStreaming ? ' using streaming processing' : '';
+    showComprehensiveStatus(`✅ Comprehensive analysis completed for ${day} using ${analysisType}${methodInfo}.`, 'success');
+
+    // Monitor memory usage
+    monitorMemoryUsage();
+
+  } catch (error) {
+    console.error('Error in comprehensive analysis:', error);
+    showComprehensiveStatus(`❌ Error during analysis: ${error.message}`, 'error');
+  }
+}
+
+// Enhanced comparison function with large dataset support
+async function performComparisonOptimized() {
+  const day = document.getElementById('comparisonDay').value;
+  const district = document.getElementById('comparisonDistrict').value;
+  const parameter = document.getElementById('comparisonParameter').value;
+  const useDateRange = document.getElementById('useDateRangeComparison').checked;
+  const useSpecificSheets = document.getElementById('useSpecificSheetsComparison').checked;
+  const startDate = document.getElementById('comparisonStartDate').value;
+  const endDate = document.getElementById('comparisonEndDate').value;
+  
+  if (!day || !district || !parameter) {
+    showComparisonStatus('❌ Please select day, district, and parameter for comparison.', 'error');
+    return;
+  }
+
+  let forecastData, observationData;
+
+  try {
+    if (useSpecificSheets) {
+      // Use specific sheets
+      const sheetSelection = validateSheetSelection('comparison');
+      
+      if (!sheetSelection.isValid) {
+        if (sheetSelection.forecastCount === 0) {
+          showComparisonStatus('❌ Please select at least one forecast sheet.', 'error');
+        } else {
+          showComparisonStatus('❌ Please select at least one observation sheet.', 'error');
+        }
+        return;
+      }
+      
+      const forecastSheets = sheetSelection.forecastSheets;
+      const observationSheets = sheetSelection.observationSheets;
+      
+      showComparisonStatus('🔍 Loading data from selected sheets...', 'info');
+      
+      const dateRangeStart = useDateRange ? startDate : null;
+      const dateRangeEnd = useDateRange ? endDate : null;
+      
+      if (useDateRange) {
+        const validation = validateDateRange(startDate, endDate);
+        if (!validation.valid) {
+          showComparisonStatus('❌ ' + validation.message, 'error');
+          return;
+        }
+      }
+      
+      // Use optimized data loading
+      const { forecastData: dbForecastData, observationData: dbObservationData } = 
+        await loadDataBySheetsOptimized(forecastSheets, observationSheets, dateRangeStart, dateRangeEnd, {
+          useCache: true,
+          compressData: true,
+          optimizeTypes: true
+        });
+      
+      const dayNumber = parseInt(day.replace('Day', ''));
+      forecastData = dbForecastData.filter(row => 
+        normalizeDistrictName(row.district_name) === normalizeDistrictName(district) &&
+        row.day_number === dayNumber
+      );
+
+      observationData = dbObservationData.filter(row => 
+        normalizeDistrictName(row.district_name) === normalizeDistrictName(district) &&
+        row.day_number === dayNumber
+      );
+      
+    } else if (useDateRange) {
+      // Use date range with all data
+      const validation = validateDateRange(startDate, endDate);
+      if (!validation.valid) {
+        showComparisonStatus('❌ ' + validation.message, 'error');
+        return;
+      }
+
+      showComparisonStatus('🔍 Loading data from database for date range...', 'info');
+
+      const [dbForecastData, dbObservationData] = await Promise.all([
+        loadForecastDataByDateRange(startDate, endDate),
+        loadObservationDataByDateRange(startDate, endDate)
+      ]);
+
+      const dayNumber = parseInt(day.replace('Day', ''));
+      forecastData = dbForecastData.filter(row => 
+        normalizeDistrictName(row.district_name) === normalizeDistrictName(district) &&
+        row.day_number === dayNumber
+      );
+
+      observationData = dbObservationData.filter(row => 
+        normalizeDistrictName(row.district_name) === normalizeDistrictName(district) &&
+        row.day_number === dayNumber
+      );
+
+    } else {
+      // Use existing processed data
+      if (processedOutput.length === 0) {
+        showComparisonStatus('❌ No forecast data available. Please process forecast data first or enable date range/sheet selection.', 'error');
+        return;
+      }
+
+      if (processedObservationOutput.length === 0) {
+        showComparisonStatus('❌ No observation data available. Please process observation data first or enable date range/sheet selection.', 'error');
+        return;
+      }
+
+      const dayNumber = parseInt(day.replace('Day', ''));
+      forecastData = processedOutput.filter(row => 
+        normalizeDistrictName(row.district_name) === normalizeDistrictName(district) &&
+        row.day_number === dayNumber
+      );
+
+      observationData = processedObservationOutput.filter(row => 
+        normalizeDistrictName(row.district_name) === normalizeDistrictName(district) &&
+        row.day_number === dayNumber
+      );
+    }
+
+    // Check if we have data to compare
+    if (forecastData.length === 0) {
+      showComparisonStatus('❌ No forecast data found for the selected criteria.', 'error');
+      return;
+    }
+
+    if (observationData.length === 0) {
+      showComparisonStatus('❌ No observation data found for the selected criteria.', 'error');
+      return;
+    }
+
+    showComparisonStatus('🔍 Performing comparison analysis...', 'info');
+
+    // Create comparison data
+    const comparisonData = createComparisonData(forecastData, observationData, parameter);
+    const statistics = calculateStatistics(comparisonData, parameter);
+
+    // Display results
+    displayComparisonResults(comparisonData, statistics, day, district, parameter);
+    
+    document.getElementById('comparisonResultsSection').style.display = 'block';
+    
+    const analysisType = useSpecificSheets ? 'specific sheets' : useDateRange ? `date range (${startDate} to ${endDate})` : 'processed data';
+    showComparisonStatus(`✅ Comparison completed for ${day}, ${district}, ${parameter} using ${analysisType}.`, 'success');
+
+    // Monitor memory usage
+    monitorMemoryUsage();
+
+  } catch (error) {
+    console.error('Error in comparison:', error);
+    showComparisonStatus(`❌ Error during comparison: ${error.message}`, 'error');
+  }
+}
+
+// Cache management functions
+function clearDataCache() {
+  memoryManager.clearCache();
+  showStatus('✅ Data cache cleared successfully.', 'success');
+  console.log('Cache cleared');
+}
+
+function showCacheStats() {
+  const stats = memoryManager.getCacheStats();
+  const memoryMB = Math.round(stats.memoryUsage / 1024 / 1024);
+  const maxMB = Math.round(MAX_MEMORY_THRESHOLD / 1024 / 1024);
+  
+  showStatus(`📊 Cache Stats: ${stats.size} entries, ${memoryMB}MB / ${maxMB}MB used`, 'info');
+  console.log('Cache stats:', stats);
+}
+
+// Add cache management to the UI
+function addCacheManagementUI() {
+  // Add cache management buttons to the header or a suitable location
+  const header = document.querySelector('header.header');
+  if (header) {
+    const cacheControls = document.createElement('div');
+    cacheControls.style.cssText = 'margin-left: auto; display: flex; gap: 10px; align-items: center;';
+    
+    const clearCacheBtn = document.createElement('button');
+    clearCacheBtn.textContent = 'Clear Cache';
+    clearCacheBtn.className = 'btn btn-sm btn-outline-warning';
+    clearCacheBtn.onclick = clearDataCache;
+    
+    const cacheStatsBtn = document.createElement('button');
+    cacheStatsBtn.textContent = 'Cache Stats';
+    cacheStatsBtn.className = 'btn btn-sm btn-outline-info';
+    cacheStatsBtn.onclick = showCacheStats;
+    
+    cacheControls.appendChild(cacheStatsBtn);
+    cacheControls.appendChild(clearCacheBtn);
+    
+    header.appendChild(cacheControls);
+  }
+}
+
+// Initialize cache management UI when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  addCacheManagementUI();
+  
+  // Monitor memory usage periodically
+  setInterval(monitorMemoryUsage, 30000); // Check every 30 seconds
+});
+
+// Initialize the application when DOM is ready
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    // Load existing sheet names
+    await loadExistingSheetNames();
+    await loadExistingObservationSheetNames();
+    
+    // Setup event listeners
+    setupEventListeners();
+    setupObservationEventListeners();
+    
+    // Populate comparison dropdowns
+    populateComparisonDropdowns();
+    
+    // Load sheet information
+    await loadSheetInformation();
+    
+    console.log('Application initialized successfully');
+  } catch (error) {
+    console.error('Error initializing application:', error);
+  }
+});
