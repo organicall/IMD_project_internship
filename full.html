@@ -156,19 +156,19 @@
     </label>
   </div>
   
-  <div id="sheetSelectionComparison" style="display: none;">
+    <div id="sheetSelectionComparison" style="display: none;">
     <div class="input-group">
-      <label for="forecastSheetSelection">Select Forecast Sheet:</label>
-      <select id="forecastSheetSelection">
-        <option value="">-- Select Forecast Sheet --</option>
-      </select>
-    </div>
+        <label for="forecastSheetSelection">Select Forecast Sheet(s):</label>
+        <div id="forecastSheetCheckboxes" class="checkbox-group">
+          <!-- Checkboxes will be populated dynamically -->
+        </div>
+      </div>
     <div class="input-group">
-      <label for="observationSheetSelection">Select Observation Sheet:</label>
-      <select id="observationSheetSelection">
-        <option value="">-- Select Observation Sheet --</option>
-      </select>
-    </div>
+        <label for="observationSheetSelection">Select Observation Sheet(s):</label>
+        <div id="observationSheetCheckboxes" class="checkbox-group">
+          <!-- Checkboxes will be populated dynamically -->
+        </div>
+      </div>
   </div>
     <button class="btn" onclick="performComparison()">🔍 Analyze Comparison</button>
     <div id="comparisonProcessingStatus"></div>
@@ -218,16 +218,16 @@
     
     <div id="sheetSelectionComprehensive" style="display: none;">
       <div class="input-group">
-        <label for="forecastSheetSelectionComp">Select Forecast Sheet:</label>
-        <select id="forecastSheetSelectionComp">
-          <option value="">-- Select Forecast Sheet --</option>
-        </select>
+        <label for="forecastSheetSelectionComp">Select Forecast Sheet(s):</label>
+        <div id="forecastSheetCheckboxesComp" class="checkbox-group">
+          <!-- Checkboxes will be populated dynamically -->
+        </div>
       </div>
       <div class="input-group">
-        <label for="observationSheetSelectionComp">Select Observation Sheet:</label>
-        <select id="observationSheetSelectionComp">
-          <option value="">-- Select Observation Sheet --</option>
-        </select>
+        <label for="observationSheetSelectionComp">Select Observation Sheet(s):</label>
+        <div id="observationSheetCheckboxesComp" class="checkbox-group">
+          <!-- Checkboxes will be populated dynamically -->
+        </div>
       </div>
     </div>
     

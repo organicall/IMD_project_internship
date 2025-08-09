@@ -129,6 +129,35 @@
     cursor: not-allowed;
   }
   
+  /* Button Size Variants */
+  button.btn-sm {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+  
+  /* Button Outline Variants */
+  button.btn-outline-primary {
+    background-color: transparent;
+    color: #2b64ba;
+    border: 1px solid #2b64ba;
+  }
+  
+  button.btn-outline-primary:hover {
+    background-color: #2b64ba;
+    color: white;
+  }
+  
+  button.btn-outline-secondary {
+    background-color: transparent;
+    color: #6c757d;
+    border: 1px solid #6c757d;
+  }
+  
+  button.btn-outline-secondary:hover {
+    background-color: #6c757d;
+    color: white;
+  }
+  
   /* Filters */
   .filter-buttons {
     display: flex;
@@ -185,140 +214,17 @@
     color: #555;
     font-style: italic;
     padding: 8px 0;
-  }
-  
-  #processingStatus,
-  #observationProcessingStatus,
-  #comparisonProcessingStatus,
-  #comprehensiveProcessingStatus {
-    margin-top: 10px;
-    font-weight: 500;
-  }
-  
-  #sheetNameValidation,
-  #observationSheetNameValidation {
-    font-size: 13px;
-    color: red;
-  }
-  
-  /* Responsive Cleanup */
-  @media (max-width: 768px) {
-    header.header {
-      align-items: flex-start;
-    }
-  
-    .filter-buttons {
-      flex-direction: column;
-    }
-  
-    .container {
-      padding: 12px;
-    }
-  }
-  
-
-  
-  .sheet-list {
-    margin-top: 15px;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    background-color: #f9f9f9;
-    max-height: 400px;
-    overflow-y: auto;
-  }
-  
-  .sheet-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 15px;
-    border-bottom: 1px solid #eee;
-    background-color: #fff;
-    margin: 5px;
-    border-radius: 4px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  }
-  
-  .sheet-item:last-child {
-    border-bottom: none;
-  }
-  
-  .sheet-info {
-    flex: 1;
-  }
-  
-  .sheet-name {
-    font-weight: 600;
-    color: #333;
-    font-size: 14px;
-    margin-bottom: 4px;
-  }
-  
-  .sheet-meta {
-    color: #666;
-    font-size: 12px;
-  }
-  
-  .sheet-actions {
-    display: flex;
-    gap: 8px;
-  }
-  
-  .btn-delete {
-    background-color: #dc3545;
-    color: white;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 500;
-    transition: background-color 0.2s ease;
-  }
-  
-  .btn-delete:hover {
-    background-color: #c82333;
-  }
-  
-  .btn-delete:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
-  }
-  
-  .btn-info {
-    background-color: #17a2b8;
-    color: white;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 500;
-    transition: background-color 0.2s ease;
-  }
-  
-  .btn-info:hover {
-    background-color: #138496;
-  }
-  
-  /* Loading animation */
-  .loading {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 10px;
-    color: #666;
+    text-align: center;
   }
   
   .loading::before {
-    /* content: "⏳"; */
-    margin-right: 8px;
+    content: "⏳ ";
     animation: spin 1s linear infinite;
   }
   
   @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
   }
   
   /* Status messages */
@@ -346,3 +252,157 @@
     color: #0c5460;
     border: 1px solid #bee5eb;
   }
+
+/* Input Groups */
+.input-group {
+  margin-bottom: 15px;
+}
+
+.input-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+/* Checkbox Groups */
+.checkbox-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 15px;
+  background-color: #f8f9fa;
+}
+
+.checkbox-group::-webkit-scrollbar {
+  width: 8px;
+}
+
+.checkbox-group::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.checkbox-group::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.checkbox-group::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background-color: white;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.checkbox-item:hover {
+  background-color: #f8f9fa;
+  border-color: #007bff;
+}
+
+.checkbox-item input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+}
+
+.checkbox-item label {
+  margin: 0;
+  cursor: pointer;
+  font-size: 13px;
+  flex: 1;
+  user-select: none;
+}
+
+.checkbox-item .sheet-count {
+  font-size: 11px;
+  color: #6c757d;
+  background-color: #e9ecef;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: auto;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .checkbox-group {
+    grid-template-columns: 1fr;
+    max-height: 150px;
+  }
+  
+  .checkbox-item {
+    padding: 6px;
+  }
+  
+  .checkbox-item label {
+    font-size: 12px;
+  }
+  
+  .sheet-count {
+    font-size: 10px;
+    padding: 1px 4px;
+  }
+}
+
+/* Checkbox Control Buttons */
+.checkbox-controls {
+  margin-bottom: 15px;
+}
+
+.checkbox-controls .btn {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.checkbox-controls .btn-outline-primary {
+  color: #007bff;
+  border-color: #007bff;
+  background-color: transparent;
+}
+
+.checkbox-controls .btn-outline-primary:hover {
+  color: white;
+  background-color: #007bff;
+}
+
+.checkbox-controls .btn-outline-secondary {
+  color: #6c757d;
+  border-color: #6c757d;
+  background-color: transparent;
+}
+
+.checkbox-controls .btn-outline-secondary:hover {
+  color: white;
+  background-color: #6c757d;
+}
+
+/* Sheet Selection Summary */
+.sheet-selection-summary {
+  margin-top: 15px;
+  padding: 12px;
+  background-color: #e8f4fd;
+  border: 1px solid #bee5eb;
+  border-radius: 6px;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.sheet-selection-summary:hover {
+  background-color: #d1ecf1;
+  border-color: #a6d8e8;
+}

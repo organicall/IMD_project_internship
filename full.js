@@ -156,6 +156,12 @@ let currentlyDeleting = {};
 let currentDisplayedData = [];
 let currentDisplayedObservationData = [];
 
+// Large data handling: pagination state and workers
+let forecastView = { data: [], pageIndex: 0, pageSize: 200 };
+let observationView = { data: [], pageIndex: 0, pageSize: 200 };
+let forecastWorker = null;
+let observationWorker = null;
+
 
 // Parameter names for display
 const parameterNames = {
@@ -672,139 +678,164 @@ function validateObservationSheetName() {
   }
 
 // Handle file upload
+function initForecastWorker() {
+  if (!forecastWorker) {
+    forecastWorker = new Worker('excel_worker.js');
+  }
+}
+
 function handleFileUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
 
   showStatus('📂 Reading Excel file...', 'info');
-  
+
+  initForecastWorker();
   const reader = new FileReader();
   reader.onload = (evt) => {
     try {
-      const workbook = XLSX.read(evt.target.result, { 
-        type: 'array',
-        cellDates: true,
-        dateNF: 'mm/dd/yyyy'
-      });
-      
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(sheet, { 
-        defval: null,
-        raw: false 
-      });
-
-      console.log('Raw Excel data:', jsonData.slice(0, 3));
-
-      // Process and normalize the data
-      forecastRows = jsonData.map(row => {
-        const forecastDate = parseDate(row.forecast_date);
-        
-        if (!forecastDate) {
-          console.warn('Invalid date found:', row.forecast_date);
-          return null;
+      forecastWorker.onmessage = (msg) => {
+        const { ok, rows, error } = msg.data || {};
+        if (!ok) {
+          showStatus('❌ Error reading Excel file: ' + (error || 'Unknown error'), 'error');
+          return;
         }
 
-        return {
-          district_name: (row.district_name || '').toString().trim(),
-          forecast_date: forecastDate,
-          rainfall: parseNullableFloat(row.rainfall),
-          temp_max_c: parseNullableFloat(row.temp_max_c),
-          temp_min_c: parseNullableFloat(row.temp_min_c),
-          humidity_1: parseNullableFloat(row.humidity_1),
-          humidity_2: parseNullableFloat(row.humidity_2),
-          wind_speed_kmph: parseNullableFloat(row.wind_speed_kmph),
-          wind_direction_deg: parseNullableFloat(row.wind_direction_deg),
-          cloud_cover_octa: parseNullableFloat(row.cloud_cover_octa)
+        console.log('Raw Excel data (first 3):', rows.slice(0, 3));
+
+        // Process and normalize the data in batches to keep UI responsive
+        const batchSize = 2000;
+        forecastRows = [];
+        let index = 0;
+
+        const processBatch = () => {
+          const slice = rows.slice(index, index + batchSize);
+          for (let i = 0; i < slice.length; i++) {
+            const row = slice[i];
+            const forecastDate = parseDate(row.forecast_date);
+            if (!forecastDate) continue;
+            const districtRaw = (row.district_name || '').toString().trim();
+            const districtNormalized = normalizeDistrictName(districtRaw);
+            const dateKey = formatDateYMD(forecastDate);
+            forecastRows.push({
+              district_name: districtNormalized,
+              forecast_date: forecastDate,
+              forecast_date_key: dateKey,
+              rainfall: parseNullableFloat(row.rainfall),
+              temp_max_c: parseNullableFloat(row.temp_max_c),
+              temp_min_c: parseNullableFloat(row.temp_min_c),
+              humidity_1: parseNullableFloat(row.humidity_1),
+              humidity_2: parseNullableFloat(row.humidity_2),
+              wind_speed_kmph: parseNullableFloat(row.wind_speed_kmph),
+              wind_direction_deg: parseNullableFloat(row.wind_direction_deg),
+              cloud_cover_octa: parseNullableFloat(row.cloud_cover_octa)
+            });
+          }
+          index += batchSize;
+          if (index < rows.length) {
+            setTimeout(processBatch, 0);
+          } else {
+            // Final filter
+            forecastRows = forecastRows.filter(r => r.district_name);
+
+            if (forecastRows.length === 0) {
+              showStatus('❌ No valid data found in the Excel file. Please check the format.', 'error');
+              return;
+            }
+
+            showStatus(`✅ Successfully loaded ${forecastRows.length} forecast records.`, 'success');
+          }
         };
-      }).map(row => ({
-        ...row,
-        district_name: normalizeDistrictName(row.district_name)
-      })).filter(row => row !== null && row.district_name); // Normalize and remove invalid rows
+        processBatch();
+      };
 
-      console.log(`Processed ${forecastRows.length} valid rows from Excel`);
-      
-      if (forecastRows.length === 0) {
-        showStatus('❌ No valid data found in the Excel file. Please check the format.', 'error');
-        return;
-      }
-
-      showStatus(`✅ Successfully loaded ${forecastRows.length} forecast records.`, 'success');
-      
+      forecastWorker.postMessage({ type: 'parse', arrayBuffer: evt.target.result }, [evt.target.result]);
     } catch (error) {
       console.error('Error reading Excel file:', error);
       showStatus('❌ Error reading Excel file: ' + error.message, 'error');
     }
   };
-  
   reader.readAsArrayBuffer(file);
 }
 
+function initObservationWorker() {
+  if (!observationWorker) {
+    observationWorker = new Worker('excel_worker.js');
+  }
+}
+
 function handleObservationFileUpload(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-  
-    showObservationStatus('📂 Reading Excel file...', 'info');
-    
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const workbook = XLSX.read(evt.target.result, { 
-          type: 'array',
-          cellDates: true,
-          dateNF: 'mm/dd/yyyy'
-        });
-        
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(sheet, { 
-          defval: null,
-          raw: false 
-        });
-  
-        console.log('Raw Observation Excel data:', jsonData.slice(0, 3));
-  
-        // Process and normalize the data
-        observationRows = jsonData.map(row => {
-          const observationDate = parseDate(row.observation_date || row.forecast_date); // Handle both column names
-          
-          if (!observationDate) {
-            console.warn('Invalid date found:', row.observation_date || row.forecast_date);
-            return null;
-          }
-  
-          return {
-            district_name: (row.district_name || '').toString().trim(),
-            observation_date: observationDate,
-            rainfall: parseNullableFloat(row.rainfall),
-            temp_max_c: parseNullableFloat(row.temp_max_c),
-            temp_min_c: parseNullableFloat(row.temp_min_c),
-            humidity_1: parseNullableFloat(row.humidity_1),
-            humidity_2: parseNullableFloat(row.humidity_2),
-            wind_speed_kmph: parseNullableFloat(row.wind_speed_kmph),
-            wind_direction_deg: parseNullableFloat(row.wind_direction_deg),
-            cloud_cover_octa: parseNullableFloat(row.cloud_cover_octa)
-          };
-        }).map(row => ({
-          ...row,
-          district_name: normalizeDistrictName(row.district_name)
-        })).filter(row => row !== null && row.district_name); // Normalize and remove invalid rows
-  
-        console.log(`Processed ${observationRows.length} valid observation rows from Excel`);
-        
-        if (observationRows.length === 0) {
-          showObservationStatus('❌ No valid data found in the Excel file. Please check the format.', 'error');
+  const file = e.target.files[0];
+  if (!file) return;
+
+  showObservationStatus('📂 Reading Excel file...', 'info');
+
+  initObservationWorker();
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    try {
+      observationWorker.onmessage = (msg) => {
+        const { ok, rows, error } = msg.data || {};
+        if (!ok) {
+          showObservationStatus('❌ Error reading Excel file: ' + (error || 'Unknown error'), 'error');
           return;
         }
-  
-        showObservationStatus(`✅ Successfully loaded ${observationRows.length} observation records.`, 'success');
-        
-      } catch (error) {
-        console.error('Error reading observation Excel file:', error);
-        showObservationStatus('❌ Error reading Excel file: ' + error.message, 'error');
-      }
-    };
-    
-    reader.readAsArrayBuffer(file);
-  }
+
+        console.log('Raw Observation Excel data (first 3):', rows.slice(0, 3));
+
+        // Process and normalize in batches
+        const batchSize = 2000;
+        observationRows = [];
+        let index = 0;
+
+        const processBatch = () => {
+          const slice = rows.slice(index, index + batchSize);
+          for (let i = 0; i < slice.length; i++) {
+            const row = slice[i];
+            const observationDate = parseDate(row.observation_date || row.forecast_date);
+            if (!observationDate) continue;
+            const districtRaw = (row.district_name || '').toString().trim();
+            const districtNormalized = normalizeDistrictName(districtRaw);
+            const dateKey = formatDateYMD(observationDate);
+            observationRows.push({
+              district_name: districtNormalized,
+              observation_date: observationDate,
+              observation_date_key: dateKey,
+              rainfall: parseNullableFloat(row.rainfall),
+              temp_max_c: parseNullableFloat(row.temp_max_c),
+              temp_min_c: parseNullableFloat(row.temp_min_c),
+              humidity_1: parseNullableFloat(row.humidity_1),
+              humidity_2: parseNullableFloat(row.humidity_2),
+              wind_speed_kmph: parseNullableFloat(row.wind_speed_kmph),
+              wind_direction_deg: parseNullableFloat(row.wind_direction_deg),
+              cloud_cover_octa: parseNullableFloat(row.cloud_cover_octa)
+            });
+          }
+          index += batchSize;
+          if (index < rows.length) {
+            setTimeout(processBatch, 0);
+          } else {
+            observationRows = observationRows.filter(r => r.district_name);
+
+            if (observationRows.length === 0) {
+              showObservationStatus('❌ No valid data found in the Excel file. Please check the format.', 'error');
+              return;
+            }
+
+            showObservationStatus(`✅ Successfully loaded ${observationRows.length} observation records.`, 'success');
+          }
+        };
+        processBatch();
+      };
+
+      observationWorker.postMessage({ type: 'parse', arrayBuffer: evt.target.result }, [evt.target.result]);
+    } catch (error) {
+      console.error('Error reading observation Excel file:', error);
+      showObservationStatus('❌ Error reading Excel file: ' + error.message, 'error');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
 
 function parseDate(dateValue) {
   if (!dateValue && dateValue !== 0) return null;
@@ -888,7 +919,17 @@ function parseNullableFloat(val) {
 // Format date for display
 function formatDate(date) {
   if (!(date instanceof Date)) return '';
-  return date.toLocaleDateString('en-US');
+  const y = date.getFullYear();
+  const m = (date.getMonth() + 1).toString().padStart(2, '0');
+  const d = date.getDate().toString().padStart(2, '0');
+  return `${m}/${d}/${y}`; // fast MM/DD/YYYY
+}
+
+function formatDateYMD(date) {
+  const y = date.getFullYear();
+  const m = (date.getMonth() + 1).toString().padStart(2, '0');
+  const d = date.getDate().toString().padStart(2, '0');
+  return `${y}-${m}-${d}`; // YYYY-MM-DD for stable keys and comparisons
 }
 
 // Check if date is a holiday
@@ -897,7 +938,7 @@ function isHoliday(dateStr, holidays) {
 }
 
 // Process forecast data and allocate days
-function processForecast() {
+async function processForecast() {
   if (forecastRows.length === 0) {
     showStatus('❌ No forecast data loaded. Please upload a file first.', 'error');
     return;
@@ -941,16 +982,18 @@ const holidays = holidaysInput
     const uniqueDistricts = [...new Set(forecastRows.map(row => normalizeDistrictName(row.district_name)))];
     console.log('Districts found:', uniqueDistricts);
 
-    // 4. Create a lookup map for faster data access
+    // 4. Create a lookup map for faster data access (chunked)
     const dataLookup = {};
-    forecastRows.forEach(row => {
-      const dateKey = formatDate(row.forecast_date);
-      const districtKey = normalizeDistrictName(row.district_name);
-      const key = `${districtKey}|${dateKey}`;
-      
-      // Keep the latest entry for each district-date combination
-      dataLookup[key] = row;
-    });
+    const lookupBatch = 5000;
+    for (let i = 0; i < forecastRows.length; i++) {
+      const row = forecastRows[i];
+      const key = `${row.district_name}|${row.forecast_date_key}`;
+      dataLookup[key] = row; // Keep the latest entry for each district-date combination
+      if (i % lookupBatch === 0 && i > 0) {
+        // Yield to the UI
+        await new Promise(r => setTimeout(r, 0));
+      }
+    }
 
     console.log('Created lookup with', Object.keys(dataLookup).length, 'unique entries');
 
@@ -972,33 +1015,29 @@ const holidays = holidaysInput
     console.log('Generated', forecastDates.length, 'forecast dates');
 
     const output = [];
-
-    // 6. For each district and each forecast date, generate the 5-day forecasts
-    for (const district of uniqueDistricts) {
-      for (const forecastDate of forecastDates) {
-        // Adjust for holiday
+    // 6. Generate outputs in batches to keep UI responsive
+    const batchTarget = 5000; // target number of output rows per yield
+    let generatedSinceYield = 0;
+    for (let dIdx = 0; dIdx < uniqueDistricts.length; dIdx++) {
+      const district = uniqueDistricts[dIdx];
+      for (let fIdx = 0; fIdx < forecastDates.length; fIdx++) {
+        const forecastDate = forecastDates[fIdx];
         let adjustedForecastDate = new Date(forecastDate);
         if (isHoliday(formatDate(forecastDate), holidays)) {
           adjustedForecastDate.setDate(adjustedForecastDate.getDate() - 1);
         }
-
-        // Generate 5-day forecasts
         for (let i = 1; i <= 5; i++) {
           let forecastedDate = new Date(adjustedForecastDate);
           forecastedDate.setDate(forecastedDate.getDate() + i);
-          
-          // Only include forecasts that fall within the original data date range
           if (forecastedDate >= firstDate && forecastedDate <= lastDate) {
-            // Look up data for this district and forecasted date
-            const lookupKey = `${district.toUpperCase().trim()}|${formatDate(forecastedDate)}`;
+            const lookupKey = `${district.toUpperCase().trim()}|${formatDateYMD(forecastedDate)}`;
             const matchingRow = dataLookup[lookupKey];
-
-            const outputRow = {
+            output.push({
               forecasted_date: formatDate(forecastedDate),
               day: 'Day' + i,
               day_number: i,
               forecast_taken_on: formatDate(adjustedForecastDate),
-              forecast_date: formatDate(forecastedDate), // For database compatibility
+              forecast_date: formatDate(forecastedDate),
               district_name: district,
               rainfall: matchingRow ? matchingRow.rainfall : null,
               temp_max_c: matchingRow ? matchingRow.temp_max_c : null,
@@ -1008,9 +1047,13 @@ const holidays = holidaysInput
               wind_speed_kmph: matchingRow ? matchingRow.wind_speed_kmph : null,
               wind_direction_deg: matchingRow ? matchingRow.wind_direction_deg : null,
               cloud_cover_octa: matchingRow ? matchingRow.cloud_cover_octa : null
-            };
-
-            output.push(outputRow);
+            });
+            generatedSinceYield++;
+            if (generatedSinceYield >= batchTarget) {
+              showStatus(`🔄 Processing... ${output.length} rows generated`, 'info');
+              await new Promise(r => setTimeout(r, 0));
+              generatedSinceYield = 0;
+            }
           }
         }
       }
@@ -1044,7 +1087,7 @@ const holidays = holidaysInput
   }
 }
 
-function processObservation() {
+async function processObservation() {
     if (observationRows.length === 0) {
       showObservationStatus('❌ No observation data loaded. Please upload a file first.', 'error');
       return;
@@ -1052,9 +1095,7 @@ function processObservation() {
   
     showObservationStatus('🔄 Processing observation allocation...', 'info');
     
-    // Use setTimeout to prevent UI freezing
-    setTimeout(() => {
-      try {
+    try {
         // Get holidays from the OBSERVATION holiday input field
         const holidaysInput = document.getElementById('observationHolidayInput').value;
         const holidays = holidaysInput
@@ -1090,16 +1131,17 @@ function processObservation() {
         const uniqueDistricts = [...new Set(observationRows.map(row => normalizeDistrictName(row.district_name)))];
         console.log('Districts found in observation:', uniqueDistricts);
   
-        // 4. Create a lookup map for faster data access
+        // 4. Create a lookup map for faster data access (chunked)
         const dataLookup = {};
-        observationRows.forEach(row => {
-          const dateKey = formatDate(row.observation_date);
-          const districtKey = normalizeDistrictName(row.district_name);
-          const key = `${districtKey}|${dateKey}`;
-          
-          // Keep the latest entry for each district-date combination
+        const lookupBatch = 5000;
+        for (let i = 0; i < observationRows.length; i++) {
+          const row = observationRows[i];
+          const key = `${row.district_name}|${row.observation_date_key}`;
           dataLookup[key] = row;
-        });
+          if (i % lookupBatch === 0 && i > 0) {
+            await new Promise(r => setTimeout(r, 0));
+          }
+        }
   
         console.log('Created observation lookup with', Object.keys(dataLookup).length, 'unique entries');
   
@@ -1121,33 +1163,29 @@ function processObservation() {
         console.log('Generated', forecastDates.length, 'observation forecast dates');
   
         const output = [];
-  
-        // 6. For each district and each forecast date, generate the 5-day forecasts
-        for (const district of uniqueDistricts) {
-          for (const forecastDate of forecastDates) {
-            // Adjust for holiday
+        // 6. Generate outputs in batches to keep UI responsive
+        const batchTarget = 5000;
+        let generatedSinceYield = 0;
+        for (let dIdx = 0; dIdx < uniqueDistricts.length; dIdx++) {
+          const district = uniqueDistricts[dIdx];
+          for (let fIdx = 0; fIdx < forecastDates.length; fIdx++) {
+            const forecastDate = forecastDates[fIdx];
             let adjustedForecastDate = new Date(forecastDate);
             if (isHoliday(formatDate(forecastDate), holidays)) {
               adjustedForecastDate.setDate(adjustedForecastDate.getDate() - 1);
             }
-  
-            // Generate 5-day forecasts
             for (let i = 1; i <= 5; i++) {
               let forecastedDate = new Date(adjustedForecastDate);
               forecastedDate.setDate(forecastedDate.getDate() + i);
-              
-              // Only include forecasts that fall within the original data date range
               if (forecastedDate >= firstDate && forecastedDate <= lastDate) {
-                // Look up data for this district and forecasted date
-                const lookupKey = `${district.toUpperCase().trim()}|${formatDate(forecastedDate)}`;
+                const lookupKey = `${district.toUpperCase().trim()}|${formatDateYMD(forecastedDate)}`;
                 const matchingRow = dataLookup[lookupKey];
-  
-                const outputRow = {
+                output.push({
                   forecasted_date: formatDate(forecastedDate),
                   day: 'Day' + i,
                   day_number: i,
                   forecast_taken_on: formatDate(adjustedForecastDate),
-                  observation_date: formatDate(forecastedDate), // For database compatibility
+                  observation_date: formatDate(forecastedDate),
                   district_name: district,
                   rainfall: matchingRow ? matchingRow.rainfall : null,
                   temp_max_c: matchingRow ? matchingRow.temp_max_c : null,
@@ -1157,9 +1195,13 @@ function processObservation() {
                   wind_speed_kmph: matchingRow ? matchingRow.wind_speed_kmph : null,
                   wind_direction_deg: matchingRow ? matchingRow.wind_direction_deg : null,
                   cloud_cover_octa: matchingRow ? matchingRow.cloud_cover_octa : null
-                };
-  
-                output.push(outputRow);
+                });
+                generatedSinceYield++;
+                if (generatedSinceYield >= batchTarget) {
+                  showObservationStatus(`🔄 Processing... ${output.length} rows generated`, 'info');
+                  await new Promise(r => setTimeout(r, 0));
+                  generatedSinceYield = 0;
+                }
               }
             }
           }
@@ -1183,7 +1225,6 @@ function processObservation() {
         console.error('Error processing observation:', error);
         showObservationStatus('❌ Error processing observation: ' + error.message, 'error');
       }
-    }, 100); // Small delay to prevent UI freezing
   }
 // Filter results by day
 function filterByDay(dayName) {
@@ -1260,22 +1301,32 @@ function filterObservationByDay(dayName) {
 
 // Render table with processed data
 function renderTable(data) {
-  currentDisplayedData = data; // Track what's currently displayed
-  
+  // Save full dataset to view with pagination
+  forecastView.data = data;
+  forecastView.pageIndex = 0;
+  currentDisplayedData = getForecastPage();
+
+  ensureForecastSectionAndRender();
+}
+
+function getForecastPage() {
+  const { data, pageIndex, pageSize } = forecastView;
+  const start = pageIndex * pageSize;
+  return data.slice(start, start + pageSize);
+}
+
+function ensureForecastSectionAndRender() {
   let forecastResultsSection = document.getElementById('resultsSection');
   if (!forecastResultsSection) {
     forecastResultsSection = document.createElement('div');
     forecastResultsSection.id = 'resultsSection';
     forecastResultsSection.className = 'section';
-    
-    // Insert after the filter section
     const filterSection = document.getElementById('filterSection');
-    if (filterSection) {
-      filterSection.insertAdjacentElement('afterend', forecastResultsSection);
-    }
+    if (filterSection) filterSection.insertAdjacentElement('afterend', forecastResultsSection);
   }
-  
-  if (data.length === 0) {
+
+  const total = forecastView.data.length;
+  if (total === 0) {
     forecastResultsSection.innerHTML = `
       <h2>📊 Processed Forecast Data</h2>
       <p>No data to display.</p>
@@ -1283,12 +1334,23 @@ function renderTable(data) {
     return;
   }
 
+  const pageData = getForecastPage();
+  currentDisplayedData = pageData;
+  const totalPages = Math.ceil(total / forecastView.pageSize) || 1;
+  const page = forecastView.pageIndex + 1;
+
   let html = `
     <h2>📊 Processed Forecast Data</h2>
-    <div style="margin-bottom: 15px;">
-      <strong>Total Records: ${data.length}</strong>
+    <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 10px; gap: 12px; flex-wrap: wrap;">
+      <div><strong>Total Records: ${total}</strong> · Showing ${pageData.length} rows</div>
+      <div>
+        <button class="btn" onclick="changeForecastPage('first')" ${page <= 1 ? 'disabled' : ''}>⏮ First</button>
+        <button class="btn" onclick="changeForecastPage('prev')" ${page <= 1 ? 'disabled' : ''}>◀ Prev</button>
+        <span style="margin: 0 8px;">Page ${page} / ${totalPages}</span>
+        <button class="btn" onclick="changeForecastPage('next')" ${page >= totalPages ? 'disabled' : ''}>Next ▶</button>
+        <button class="btn" onclick="changeForecastPage('last')" ${page >= totalPages ? 'disabled' : ''}>Last ⏭</button>
+      </div>
     </div>
-    
     <div style="max-height: 500px; overflow: auto; border: 1px solid #ccc; border-radius: 8px;">
       <table>
         <thead>
@@ -1309,7 +1371,7 @@ function renderTable(data) {
         </thead>
         <tbody>`;
 
-  for (let row of data) {
+  for (let row of pageData) {
     html += `<tr>
       <td>${row.forecasted_date}</td>
       <td><span style="background: linear-gradient(45deg, #667eea, #764ba2); color: white; padding: 4px 8px; border-radius: 15px; font-size: 12px;">${row.day}</span></td>
@@ -1328,7 +1390,6 @@ function renderTable(data) {
 
   html += `</tbody></table></div>
     
-    <!-- Export buttons for forecast -->
     <div style="margin-top: 20px;" id="forecastExportButtons">
       <h4 style="margin-bottom: 10px;">📁 Export Forecast Data</h4>
       <div style="margin-bottom: 15px;">
@@ -1336,7 +1397,6 @@ function renderTable(data) {
         <button class="btn" onclick="exportCurrentForecastView()">📁 Export Current View</button>
         <p style="font-size: 12px; color: #666; margin-top: 5px;">Exports whatever is currently displayed in the table above</p>
       </div>
-      
       <div>
         <h5 style="margin-bottom: 10px;">Export Specific Days:</h5>
         <button class="btn" onclick="exportForecastToExcel('All')">📁 Export All Days</button>
@@ -1347,15 +1407,34 @@ function renderTable(data) {
         <button class="btn" onclick="exportForecastToExcel('Day5')">📁 Export Day 5</button>
       </div>
     </div>`;
-  
+
   forecastResultsSection.innerHTML = html;
   forecastResultsSection.style.display = 'block';
 }
 
+function changeForecastPage(action) {
+  const totalPages = Math.ceil(forecastView.data.length / forecastView.pageSize) || 1;
+  if (action === 'first') forecastView.pageIndex = 0;
+  else if (action === 'prev') forecastView.pageIndex = Math.max(0, forecastView.pageIndex - 1);
+  else if (action === 'next') forecastView.pageIndex = Math.min(totalPages - 1, forecastView.pageIndex + 1);
+  else if (action === 'last') forecastView.pageIndex = totalPages - 1;
+  ensureForecastSectionAndRender();
+}
+
 function renderObservationTable(data) {
-  currentDisplayedObservationData = data; // Track what's currently displayed
-  
-  // Create a results section for observation if it doesn't exist
+  observationView.data = data;
+  observationView.pageIndex = 0;
+  currentDisplayedObservationData = getObservationPage();
+  ensureObservationSectionAndRender();
+}
+
+function getObservationPage() {
+  const { data, pageIndex, pageSize } = observationView;
+  const start = pageIndex * pageSize;
+  return data.slice(start, start + pageSize);
+}
+
+function ensureObservationSectionAndRender() {
   let observationResultsSection = document.getElementById('observationResultsSection');
   if (!observationResultsSection) {
     observationResultsSection = document.createElement('div');
@@ -1372,7 +1451,6 @@ function renderObservationTable(data) {
         <button class="btn" onclick="filterObservationByDay('Day5')">Day 5</button>
       </div>
       <div id="observationResult"></div>
-      <!-- Export buttons for observation -->
       <div style="margin-top: 20px;" id="observationExportButtons">
         <button class="btn" onclick="exportCurrentObservationView()">📁 Export Current View</button>
         <button class="btn" onclick="exportObservationToExcel('All')">📁 Export All</button>
@@ -1383,25 +1461,36 @@ function renderObservationTable(data) {
         <button class="btn" onclick="exportObservationToExcel('Day5')">📁 Export Day 5</button>
       </div>
     `;
-    
-    // Insert after the observation upload section
     const observationUploadSection = document.querySelector('.section:has(#observationFileInput)');
     if (observationUploadSection) {
       observationUploadSection.insertAdjacentElement('afterend', observationResultsSection);
     }
   }
-  
+
   observationResultsSection.style.display = 'block';
   const resultDiv = document.getElementById('observationResult');
-  
-  if (data.length === 0) {
+
+  const total = observationView.data.length;
+  if (total === 0) {
     resultDiv.innerHTML = '<p>No observation data to display.</p>';
     return;
   }
 
+  const pageData = getObservationPage();
+  currentDisplayedObservationData = pageData;
+  const totalPages = Math.ceil(total / observationView.pageSize) || 1;
+  const page = observationView.pageIndex + 1;
+
   let html = `
-    <div style="margin-bottom: 15px;">
-      <strong>Total Observation Records: ${data.length}</strong>
+    <div style=\"display:flex; justify-content: space-between; align-items:center; margin-bottom: 10px; gap: 12px; flex-wrap: wrap;\"> 
+      <div><strong>Total Observation Records: ${total}</strong> · Showing ${pageData.length} rows</div>
+      <div>
+        <button class=\"btn\" onclick=\"changeObservationPage('first')\" ${page <= 1 ? 'disabled' : ''}>⏮ First</button>
+        <button class=\"btn\" onclick=\"changeObservationPage('prev')\" ${page <= 1 ? 'disabled' : ''}>◀ Prev</button>
+        <span style=\"margin: 0 8px;\">Page ${page} / ${totalPages}</span>
+        <button class=\"btn\" onclick=\"changeObservationPage('next')\" ${page >= totalPages ? 'disabled' : ''}>Next ▶</button>
+        <button class=\"btn\" onclick=\"changeObservationPage('last')\" ${page >= totalPages ? 'disabled' : ''}>Last ⏭</button>
+      </div>
     </div>
     <div style="max-height: 500px; overflow: auto; border: 1px solid #ccc; border-radius: 8px;">
       <table>
@@ -1423,7 +1512,7 @@ function renderObservationTable(data) {
         </thead>
         <tbody>`;
 
-  for (let row of data) {
+  for (let row of pageData) {
     html += `<tr>
       <td>${row.forecasted_date}</td>
       <td><span style="background: linear-gradient(45deg, #28a745, #20c997); color: white; padding: 4px 8px; border-radius: 15px; font-size: 12px;">${row.day}</span></td>
@@ -1442,6 +1531,15 @@ function renderObservationTable(data) {
 
   html += '</tbody></table></div>';
   resultDiv.innerHTML = html;
+}
+
+function changeObservationPage(action) {
+  const totalPages = Math.ceil(observationView.data.length / observationView.pageSize) || 1;
+  if (action === 'first') observationView.pageIndex = 0;
+  else if (action === 'prev') observationView.pageIndex = Math.max(0, observationView.pageIndex - 1);
+  else if (action === 'next') observationView.pageIndex = Math.min(totalPages - 1, observationView.pageIndex + 1);
+  else if (action === 'last') observationView.pageIndex = totalPages - 1;
+  ensureObservationSectionAndRender();
 }
 
 
@@ -1985,14 +2083,20 @@ async function performComparison() {
 
   try {
     if (useSpecificSheets) {
-      // Use specific sheets
-      const forecastSheet = document.getElementById('forecastSheetSelection').value;
-      const observationSheet = document.getElementById('observationSheetSelection').value;
+            // Use specific sheets
+      const sheetSelection = validateSheetSelection('comparison');
       
-      if (!forecastSheet || !observationSheet) {
-        showComparisonStatus('❌ Please select both forecast and observation sheets.', 'error');
+      if (!sheetSelection.isValid) {
+        if (sheetSelection.forecastCount === 0) {
+          showComparisonStatus('❌ Please select at least one forecast sheet.', 'error');
+        } else {
+          showComparisonStatus('❌ Please select at least one observation sheet.', 'error');
+        }
         return;
       }
+      
+      const forecastSheets = sheetSelection.forecastSheets;
+      const observationSheets = sheetSelection.observationSheets;
       
       showComparisonStatus('🔍 Loading data from selected sheets...', 'info');
       
@@ -2008,7 +2112,7 @@ async function performComparison() {
       }
       
       const { forecastData: dbForecastData, observationData: dbObservationData } = 
-        await loadDataBySheets(forecastSheet, observationSheet, dateRangeStart, dateRangeEnd);
+        await loadDataBySheets(forecastSheets, observationSheets, dateRangeStart, dateRangeEnd);
       
       const dayNumber = parseInt(day.replace('Day', ''));
       forecastData = dbForecastData.filter(row => 
@@ -2097,8 +2201,8 @@ async function performComparison() {
         parameter: parameter,
         useDateRange: useDateRange,
         useSpecificSheets: useSpecificSheets,
-        forecastSheet: useSpecificSheets ? document.getElementById('forecastSheetSelection').value : null,
-        observationSheet: useSpecificSheets ? document.getElementById('observationSheetSelection').value : null,
+        forecastSheets: useSpecificSheets ? forecastSheets : null,
+        observationSheets: useSpecificSheets ? observationSheets : null,
         startDate: startDate,
         endDate: endDate
       }
@@ -2698,13 +2802,19 @@ async function performComprehensiveAnalysis() {
   try {
     if (useSpecificSheets) {
       // Use specific sheets
-      const forecastSheet = document.getElementById('forecastSheetSelectionComp').value;
-      const observationSheet = document.getElementById('observationSheetSelectionComp').value;
+      const sheetSelection = validateSheetSelection('comprehensive');
       
-      if (!forecastSheet || !observationSheet) {
-        showComprehensiveStatus('❌ Please select both forecast and observation sheets.', 'error');
+      if (!sheetSelection.isValid) {
+        if (sheetSelection.forecastCount === 0) {
+          showComprehensiveStatus('❌ Please select at least one forecast sheet.', 'error');
+        } else {
+          showComprehensiveStatus('❌ Please select at least one observation sheet.', 'error');
+        }
         return;
       }
+      
+      const forecastSheets = sheetSelection.forecastSheets;
+      const observationSheets = sheetSelection.observationSheets;
       
       showComprehensiveStatus('🔍 Loading data from selected sheets...', 'info');
       
@@ -2720,7 +2830,7 @@ async function performComprehensiveAnalysis() {
       }
       
       const { forecastData: dbForecastData, observationData: dbObservationData } = 
-        await loadDataBySheets(forecastSheet, observationSheet, dateRangeStart, dateRangeEnd);
+        await loadDataBySheets(forecastSheets, observationSheets, dateRangeStart, dateRangeEnd);
       
       allForecastData = dbForecastData;
       allObservationData = dbObservationData;
@@ -2841,15 +2951,15 @@ async function performComprehensiveAnalysis() {
 
     // Calculate state-wide averages
     const stateAverages = calculateStateAverages(results, parameters);   
-    comprehensiveResults = {
+      comprehensiveResults = {
       day: day,
       districts: results,
       stateAverages: stateAverages,
       parameters: parameters,
       useDateRange: useDateRange,
       useSpecificSheets: useSpecificSheets,
-      forecastSheet: useSpecificSheets ? document.getElementById('forecastSheetSelectionComp').value : null,
-      observationSheet: useSpecificSheets ? document.getElementById('observationSheetSelectionComp').value : null,
+        forecastSheet: useSpecificSheets ? document.getElementById('forecastSheetSelectionComp').value : null,
+        observationSheet: useSpecificSheets ? document.getElementById('observationSheetSelectionComp').value : null,
       startDate: startDate,
       endDate: endDate
     };
@@ -3614,49 +3724,250 @@ function toggleSheetSelection(type) {
 }
 
 function populateSheetDropdowns(type) {
-  let forecastSelectId, observationSelectId;
+  let forecastCheckboxId, observationCheckboxId;
   
   if (type === 'comparison') {
-    forecastSelectId = 'forecastSheetSelection';
-    observationSelectId = 'observationSheetSelection';
+    forecastCheckboxId = 'forecastSheetCheckboxes';
+    observationCheckboxId = 'observationSheetCheckboxes';
   } else {
-    forecastSelectId = 'forecastSheetSelectionComp';
-    observationSelectId = 'observationSheetSelectionComp';
+    forecastCheckboxId = 'forecastSheetCheckboxesComp';
+    observationCheckboxId = 'observationSheetCheckboxesComp';
   }
   
-  const forecastSelect = document.getElementById(forecastSelectId);
-  const observationSelect = document.getElementById(observationSelectId);
+  const forecastCheckboxDiv = document.getElementById(forecastCheckboxId);
+  const observationCheckboxDiv = document.getElementById(observationCheckboxId);
   
-  // Populate forecast sheets
-  forecastSelect.innerHTML = '<option value="">-- Select Forecast Sheet --</option>';
+  // Show loading indicator
+  forecastCheckboxDiv.innerHTML = '<div class="loading">Loading forecast sheets...</div>';
+  observationCheckboxDiv.innerHTML = '<div class="loading">Loading observation sheets...</div>';
+  
+  // Use setTimeout to allow the loading indicator to show
+  setTimeout(() => {
+    populateForecastCheckboxes(type, forecastCheckboxDiv);
+    populateObservationCheckboxes(type, observationCheckboxDiv);
+  }, 100);
+}
+
+function populateForecastCheckboxes(type, forecastCheckboxDiv) {
+  forecastCheckboxDiv.innerHTML = '';
+  
+  // Add select all/clear all buttons for forecast sheets
+  const forecastControls = document.createElement('div');
+  forecastControls.className = 'checkbox-controls';
+  forecastControls.style.cssText = 'margin-bottom: 10px; display: flex; gap: 10px;';
+  
+  const selectAllForecast = document.createElement('button');
+  selectAllForecast.type = 'button';
+  selectAllForecast.textContent = 'Select All';
+  selectAllForecast.className = 'btn btn-sm btn-outline-primary';
+  selectAllForecast.onclick = () => {
+    forecastCheckboxDiv.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+    updateSheetSelectionSummary(type);
+  };
+  
+  const clearAllForecast = document.createElement('button');
+  clearAllForecast.type = 'button';
+  clearAllForecast.textContent = 'Clear All';
+  clearAllForecast.className = 'btn btn-sm btn-outline-secondary';
+  clearAllForecast.onclick = () => {
+    forecastCheckboxDiv.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+    updateSheetSelectionSummary(type);
+  };
+  
+  forecastControls.appendChild(selectAllForecast);
+  forecastControls.appendChild(clearAllForecast);
+  forecastCheckboxDiv.appendChild(forecastControls);
+  
+  // Populate forecast sheets with checkboxes
   forecastSheets.forEach(sheet => {
-    const option = document.createElement('option');
-    option.value = sheet.name;
-    option.textContent = `${sheet.name} (${sheet.records} records)`;
-    forecastSelect.appendChild(option);
-  });
-  
-  // Populate observation sheets
-  observationSelect.innerHTML = '<option value="">-- Select Observation Sheet --</option>';
-  observationSheets.forEach(sheet => {
-    const option = document.createElement('option');
-    option.value = sheet.name;
-    option.textContent = `${sheet.name} (${sheet.records} records)`;
-    observationSelect.appendChild(option);
+    const checkboxItem = document.createElement('div');
+    checkboxItem.className = 'checkbox-item';
+    
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.value = sheet.name;
+    checkbox.id = `forecast_${type}_${sheet.name}`;
+    checkbox.onchange = () => updateSheetSelectionSummary(type);
+    
+    const label = document.createElement('label');
+    label.htmlFor = `forecast_${type}_${sheet.name}`;
+    label.textContent = sheet.name;
+    
+    const countSpan = document.createElement('span');
+    countSpan.className = 'sheet-count';
+    countSpan.textContent = `${sheet.records} records`;
+    
+    checkboxItem.appendChild(checkbox);
+    checkboxItem.appendChild(label);
+    checkboxItem.appendChild(countSpan);
+    forecastCheckboxDiv.appendChild(checkboxItem);
   });
 }
 
-async function loadDataBySheets(forecastSheet, observationSheet, startDate = null, endDate = null) {
+function populateObservationCheckboxes(type, observationCheckboxDiv) {
+  observationCheckboxDiv.innerHTML = '';
+  
+  // Add select all/clear all buttons for observation sheets
+  const observationControls = document.createElement('div');
+  observationControls.className = 'checkbox-controls';
+  observationControls.style.cssText = 'margin-bottom: 10px; display: flex; gap: 10px;';
+  
+  const selectAllObservation = document.createElement('button');
+  selectAllObservation.type = 'button';
+  selectAllObservation.textContent = 'Select All';
+  selectAllObservation.className = 'btn btn-sm btn-outline-primary';
+  selectAllObservation.onclick = () => {
+    observationCheckboxDiv.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+    updateSheetSelectionSummary(type);
+  };
+  
+  const clearAllObservation = document.createElement('button');
+  clearAllObservation.type = 'button';
+  clearAllObservation.textContent = 'Clear All';
+  clearAllObservation.className = 'btn btn-sm btn-outline-secondary';
+  clearAllObservation.onclick = () => {
+    observationCheckboxDiv.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+    updateSheetSelectionSummary(type);
+  };
+  
+  observationControls.appendChild(selectAllObservation);
+  observationControls.appendChild(clearAllObservation);
+  observationCheckboxDiv.appendChild(observationControls);
+  
+  // Populate observation sheets with checkboxes
+  observationSheets.forEach(sheet => {
+    const checkboxItem = document.createElement('div');
+    checkboxItem.className = 'checkbox-item';
+    
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.value = sheet.name;
+    checkbox.id = `observation_${type}_${sheet.name}`;
+    checkbox.onchange = () => updateSheetSelectionSummary(type);
+    
+    const label = document.createElement('label');
+    label.htmlFor = `observation_${type}_${sheet.name}`;
+    label.textContent = sheet.name;
+    
+    const countSpan = document.createElement('span');
+    countSpan.className = 'sheet-count';
+    countSpan.textContent = `${sheet.records} records`;
+    
+    checkboxItem.appendChild(checkbox);
+    checkboxItem.appendChild(label);
+    checkboxItem.appendChild(countSpan);
+    observationCheckboxDiv.appendChild(checkboxItem);
+  });
+  
+  // Add summary section
+  const summaryDiv = document.createElement('div');
+  summaryDiv.id = `sheetSummary_${type}`;
+  summaryDiv.className = 'sheet-selection-summary';
+  summaryDiv.style.cssText = 'margin-top: 15px; padding: 10px; background-color: #e8f4fd; border: 1px solid #bee5eb; border-radius: 4px; font-size: 13px;';
+  
+  const summaryTitle = document.createElement('strong');
+  summaryTitle.textContent = 'Selected Sheets Summary: ';
+  summaryDiv.appendChild(summaryTitle);
+  
+  const summaryText = document.createElement('span');
+  summaryText.id = `summaryText_${type}`;
+  summaryText.textContent = 'No sheets selected';
+  summaryDiv.appendChild(summaryText);
+  
+  if (type === 'comparison') {
+    document.getElementById('sheetSelectionComparison').appendChild(summaryDiv);
+  } else {
+    document.getElementById('sheetSelectionComprehensive').appendChild(summaryDiv);
+  }
+  
+  // Initialize summary
+  updateSheetSelectionSummary(type);
+}
+
+function updateSheetSelectionSummary(type) {
+  let forecastCheckboxId, observationCheckboxId, summaryTextId;
+  
+  if (type === 'comparison') {
+    forecastCheckboxId = 'forecastSheetCheckboxes';
+    observationCheckboxId = 'observationSheetCheckboxes';
+    summaryTextId = 'summaryText_comparison';
+  } else {
+    forecastCheckboxId = 'forecastSheetCheckboxesComp';
+    observationCheckboxId = 'observationSheetCheckboxesComp';
+    summaryTextId = 'summaryText_comprehensive';
+  }
+  
+  const selectedForecastSheets = Array.from(document.querySelectorAll(`#${forecastCheckboxId} input[type="checkbox"]:checked`)).map(cb => cb.value);
+  const selectedObservationSheets = Array.from(document.querySelectorAll(`#${observationCheckboxId} input[type="checkbox"]:checked`)).map(cb => cb.value);
+  
+  const summaryText = document.getElementById(summaryTextId);
+  
+  if (selectedForecastSheets.length === 0 && selectedObservationSheets.length === 0) {
+    summaryText.textContent = 'No sheets selected';
+    summaryText.style.color = '#dc3545';
+  } else {
+    let summary = '';
+    
+    // Calculate total records for forecast sheets
+    if (selectedForecastSheets.length > 0) {
+      const forecastRecords = selectedForecastSheets.reduce((total, sheetName) => {
+        const sheet = forecastSheets.find(s => s.name === sheetName);
+        return total + (sheet ? sheet.records : 0);
+      }, 0);
+      summary += `Forecast: ${selectedForecastSheets.length} sheet(s) - ${forecastRecords} records`;
+    }
+    
+    // Calculate total records for observation sheets
+    if (selectedObservationSheets.length > 0) {
+      if (summary) summary += ' | ';
+      const observationRecords = selectedObservationSheets.reduce((total, sheetName) => {
+        const sheet = observationSheets.find(s => s.name === sheetName);
+        return total + (sheet ? sheet.records : 0);
+      }, 0);
+      summary += `Observation: ${selectedObservationSheets.length} sheet(s) - ${observationRecords} records`;
+    }
+    
+    summaryText.textContent = summary;
+    summaryText.style.color = '#28a745';
+  }
+}
+
+function validateSheetSelection(type) {
+  let forecastCheckboxId, observationCheckboxId;
+  
+  if (type === 'comparison') {
+    forecastCheckboxId = 'forecastSheetCheckboxes';
+    observationCheckboxId = 'observationSheetCheckboxes';
+  } else {
+    forecastCheckboxId = 'forecastSheetCheckboxesComp';
+    observationCheckboxId = 'observationSheetCheckboxesComp';
+  }
+  
+  const selectedForecastSheets = Array.from(document.querySelectorAll(`#${forecastCheckboxId} input[type="checkbox"]:checked`)).map(cb => cb.value);
+  const selectedObservationSheets = Array.from(document.querySelectorAll(`#${observationCheckboxId} input[type="checkbox"]:checked`)).map(cb => cb.value);
+  
+  return {
+    forecastSheets: selectedForecastSheets,
+    observationSheets: selectedObservationSheets,
+    isValid: selectedForecastSheets.length > 0 && selectedObservationSheets.length > 0,
+    forecastCount: selectedForecastSheets.length,
+    observationCount: selectedObservationSheets.length
+  };
+}
+
+async function loadDataBySheets(forecastSheetsOrOne, observationSheetsOrOne, startDate = null, endDate = null) {
   try {
     let forecastQuery = client.from('full_forecast').select('*');
     let observationQuery = client.from('full_observation').select('*');
     
     // Apply sheet filters if specified
-    if (forecastSheet) {
-      forecastQuery = forecastQuery.eq('sheet_name', forecastSheet);
+    const forecastSheets = Array.isArray(forecastSheetsOrOne) ? forecastSheetsOrOne : (forecastSheetsOrOne ? [forecastSheetsOrOne] : []);
+    const observationSheets = Array.isArray(observationSheetsOrOne) ? observationSheetsOrOne : (observationSheetsOrOne ? [observationSheetsOrOne] : []);
+    if (forecastSheets.length > 0) {
+      forecastQuery = forecastQuery.in('sheet_name', forecastSheets);
     }
-    if (observationSheet) {
-      observationQuery = observationQuery.eq('sheet_name', observationSheet);
+    if (observationSheets.length > 0) {
+      observationQuery = observationQuery.in('sheet_name', observationSheets);
     }
     
     // Apply date range filters if specified
