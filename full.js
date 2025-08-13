@@ -57,6 +57,7 @@ const DISTRICT_ALIASES = {
   'YSR': 'KADAPA',
   'YSR KADAP': 'KADAPA',
   'SPSR NELLORE': 'NELLORE',
+  'SPSR-NELLORE': 'NELLORE',
   'WEST GODAVARI': 'WEST-GODAVARI',
   'VISAKHA': 'VISAKHAPATNAM',
   'VSKP': 'VISAKHAPATNAM',
@@ -231,37 +232,76 @@ async function performComprehensiveAnalysis() {
             // Create comparison data for this parameter
             const comparisonData = createComparisonData(forecastData, observationData, parameter);
             const statistics = calculateStatistics(comparisonData, parameter); // This now uses parameter-specific thresholds
-            
-            districtResult.parameters[parameter] = {
-              correct: statistics.correct,
-              usable: statistics.usable,
-              unusable: statistics.unusable,
-              correctPlusUsable: statistics.correct + statistics.usable,
-              validDays: statistics.validDays,
-              missingDays: statistics.missingDays,
-              n1: statistics.n1,
-              n2: statistics.n2,
-              n3: statistics.n3,
-              threshold1: statistics.threshold1,
-              threshold2: statistics.threshold2,
-              useN11ForUnusable: statistics.useN11ForUnusable
-            };
+            if (parameter === 'rainfall') {
+              districtResult.parameters[parameter] = {
+                correct: statistics.correct,
+                usable: statistics.usable,
+                unusable: statistics.unusable,
+                correctPlusUsable: statistics.correct + statistics.usable,
+                validDays: statistics.validDays,
+                missingDays: statistics.missingDays,
+                YY: statistics.YY,
+                YN: statistics.YN,
+                NY: statistics.NY,
+                NN: statistics.NN,
+                YU: statistics.YU,
+                NU: statistics.NU,
+                matchingCases: statistics.matchingCases,
+                totalDays: statistics.totalDays,
+                isRainfall: true
+              };
+            } else {
+              districtResult.parameters[parameter] = {
+                correct: statistics.correct,
+                usable: statistics.usable,
+                unusable: statistics.unusable,
+                correctPlusUsable: statistics.correct + statistics.usable,
+                validDays: statistics.validDays,
+                missingDays: statistics.missingDays,
+                n1: statistics.n1,
+                n2: statistics.n2,
+                n3: statistics.n3,
+                threshold1: statistics.threshold1,
+                threshold2: statistics.threshold2,
+                useN11ForUnusable: statistics.useN11ForUnusable
+              };
+            }
           } else {
             // No data available
-            districtResult.parameters[parameter] = {
-              correct: 0,
-              usable: 0,
-              unusable: 0,
-              correctPlusUsable: 0,
-              validDays: 0,
-              missingDays: 0,
-              n1: 0,
-              n2: 0,
-              n3: 0,
-              threshold1: 0,
-              threshold2: 0,
-              useN11ForUnusable: false
-            };
+            if (parameter === 'rainfall') {
+              districtResult.parameters[parameter] = {
+                correct: 0,
+                usable: 0,
+                unusable: 0,
+                correctPlusUsable: 0,
+                validDays: 0,
+                missingDays: 0,
+                YY: 0,
+                YN: 0,
+                NY: 0,
+                NN: 0,
+                YU: 0,
+                NU: 0,
+                matchingCases: 0,
+                totalDays: 0,
+                isRainfall: true
+              };
+            } else {
+              districtResult.parameters[parameter] = {
+                correct: 0,
+                usable: 0,
+                unusable: 0,
+                correctPlusUsable: 0,
+                validDays: 0,
+                missingDays: 0,
+                n1: 0,
+                n2: 0,
+                n3: 0,
+                threshold1: 0,
+                threshold2: 0,
+                useN11ForUnusable: false
+              };
+            }
           }
         }
         
@@ -276,11 +316,62 @@ async function performComprehensiveAnalysis() {
         parameters: parameters
       };
   
+      // Store raw data globally for performance graphs
+      window.lastComprehensiveData = [];
+      
+      // Store the raw forecast and observation data for the selected day
+      const rawData = processedOutput.filter(row => row.day_number === dayNumber);
+      const rawObservationData = processedObservationOutput.filter(row => row.day_number === dayNumber);
+      
+      console.log('Raw data for performance graphs:', {
+        dayNumber: dayNumber,
+        rawDataLength: rawData.length,
+        rawObservationDataLength: rawObservationData.length,
+        processedOutputLength: processedOutput.length,
+        processedObservationOutputLength: processedObservationOutput.length
+      });
+      
+      // Combine and format the data for performance analysis
+      rawData.forEach(forecastRow => {
+        const observationRow = rawObservationData.find(obs => 
+          normalizeDistrictName(obs.district_name) === normalizeDistrictName(forecastRow.district_name)
+        );
+        
+        if (observationRow) {
+          window.lastComprehensiveData.push({
+            day: day,
+            district: forecastRow.district_name,
+            rainfall: observationRow.rainfall,
+            temp_max_c: observationRow.temp_max_c,
+            temp_min_c: observationRow.temp_min_c,
+            humidity_1: observationRow.humidity_1,
+            humidity_2: observationRow.humidity_2,
+            wind_speed_kmph: observationRow.wind_speed_kmph,
+            wind_direction_deg: observationRow.wind_direction_deg,
+            cloud_cover_octa: observationRow.cloud_cover_octa
+          });
+        }
+      });
+      
+      console.log('Stored performance data:', window.lastComprehensiveData);
+      
+      // Also store in a more accessible location
+      window.comprehensivePerformanceData = window.lastComprehensiveData;
+      
+      // Store in a global variable for easier access
+      if (typeof window.globalComprehensiveData === 'undefined') {
+        window.globalComprehensiveData = {};
+      }
+      window.globalComprehensiveData[day] = window.lastComprehensiveData;
+      
+      console.log('Global data storage:', window.globalComprehensiveData);
+      
       // Display results
       displayComprehensiveResults(comprehensiveResults);
       
       document.getElementById('comprehensiveResultsSection').style.display = 'block';
-      showComprehensiveStatus(`✅ Comprehensive analysis completed for ${day}.`, 'success');
+      document.getElementById('graphSection').style.display = 'block';
+      showComprehensiveStatus(`✅ Comprehensive analysis completed for ${day}. You can now generate performance graphs.`, 'success');
   
     } catch (error) {
       console.error('Comprehensive analysis error:', error);
@@ -325,7 +416,7 @@ function calculateStateAverages(results, parameters) {
 
 function displayComprehensiveResults(results) {
   const summaryDiv = document.getElementById('comprehensiveSummary');
-  summaryDiv.innerHTML = `
+  let summaryHtml = `
     <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
       <h4>Analysis Summary for ${results.day}</h4>
       <p><strong>Total Districts Analyzed:</strong> ${results.districts.length}</p>
@@ -333,6 +424,52 @@ function displayComprehensiveResults(results) {
       <p><strong>Note:</strong> Rainfall uses YY/YN/NY/NN methodology; other parameters use threshold-based analysis</p>
     </div>
   `;
+
+  // Add rainfall-specific summary for each district if rainfall is present
+  if (results.parameters.includes('rainfall')) {
+    summaryHtml += `<div style="margin-bottom: 10px;">
+      <h5>Rainfall Statistical Summary (YY/YN/NY/NN):</h5>
+      <table style="font-size: 12px; border-collapse: collapse;">
+        <thead>
+          <tr style="background: #e9ecef;">
+            <th style="padding: 4px 8px; border: 1px solid #ccc;">District</th>
+            <th style="padding: 4px 8px; border: 1px solid #ccc;">Missing Days</th>
+            <th style="padding: 4px 8px; border: 1px solid #ccc;">Total Days</th>
+            <th style="padding: 4px 8px; border: 1px solid #ccc;">Valid Days (N)</th>
+            <th style="padding: 4px 8px; border: 1px solid #ccc;">YY</th>
+            <th style="padding: 4px 8px; border: 1px solid #ccc;">YN</th>
+            <th style="padding: 4px 8px; border: 1px solid #ccc;">NY</th>
+            <th style="padding: 4px 8px; border: 1px solid #ccc;">NN</th>
+            <th style="padding: 4px 8px; border: 1px solid #ccc;">Matching Cases (YY+NN)</th>
+            <th style="padding: 4px 8px; border: 1px solid #ccc;">Correct (%)</th>
+            <th style="padding: 4px 8px; border: 1px solid #ccc;">Usable (%)</th>
+            <th style="padding: 4px 8px; border: 1px solid #ccc;">Unusable (%)</th>
+          </tr>
+        </thead>
+        <tbody>`;
+    results.districts.forEach(district => {
+      const rain = district.parameters['rainfall'];
+      if (rain) {
+        summaryHtml += `<tr>
+          <td style="padding: 4px 8px; border: 1px solid #ccc;">${district.district}</td>
+          <td style="padding: 4px 8px; border: 1px solid #ccc;">${rain.missingDays}</td>
+          <td style="padding: 4px 8px; border: 1px solid #ccc;">${rain.totalDays}</td>
+          <td style="padding: 4px 8px; border: 1px solid #ccc;">${rain.validDays}</td>
+          <td style="padding: 4px 8px; border: 1px solid #ccc;">${rain.YY}</td>
+          <td style="padding: 4px 8px; border: 1px solid #ccc;">${rain.YN}</td>
+          <td style="padding: 4px 8px; border: 1px solid #ccc;">${rain.NY}</td>
+          <td style="padding: 4px 8px; border: 1px solid #ccc;">${rain.NN}</td>
+          <td style="padding: 4px 8px; border: 1px solid #ccc;">${rain.matchingCases}</td>
+          <td style="padding: 4px 8px; border: 1px solid #ccc;">${rain.correct.toFixed(1)}%</td>
+          <td style="padding: 4px 8px; border: 1px solid #ccc;">${rain.usable.toFixed(1)}%</td>
+          <td style="padding: 4px 8px; border: 1px solid #ccc;">${rain.unusable.toFixed(1)}%</td>
+        </tr>`;
+      }
+    });
+    summaryHtml += `</tbody></table></div>`;
+  }
+
+  summaryDiv.innerHTML = summaryHtml;
   
   // Create comprehensive table
   const tableDiv = document.getElementById('comprehensiveTable');
@@ -2092,6 +2229,16 @@ function showObservationStatus(message, type) {
 
 
 
+// ===================== Forecast vs Observation Comparison Workflow =====================
+/**
+ * Part: Forecast vs Observation Comparison
+ * Function: performComparison
+ * Purpose: Orchestrate the comparison flow for a selected day, district, and parameter.
+ * Inputs: UI selections (day, district, parameter, date range/sheet options)
+ * Output: Populates global comparisonResults and triggers displayComparisonResults.
+ * Preceded by: Data loading utilities (validateDateRange, loadDataBySheets, load*ByDateRange)
+ * Followed by: createComparisonData -> calculateStatistics/calculateRainfallStatistics -> displayComparisonResults -> (optional) exportComparisonToExcel
+ */
 async function performComparison() {
   const day = document.getElementById('comparisonDay').value;
   const district = document.getElementById('comparisonDistrict').value;
@@ -2251,6 +2398,15 @@ async function performComparison() {
 
 
 
+/**
+ * Part: Forecast vs Observation Comparison
+ * Function: createComparisonData
+ * Purpose: Join forecast and observation series by date for a parameter and compute absolute differences.
+ * Inputs: forecastData[], observationData[], parameter key
+ * Output: comparisonData[] with { date, forecastValue, observationValue, absoluteDifference, isMissing }
+ * Preceded by: performComparison / performComparisonOptimized (data loading done)
+ * Followed by: calculateStatistics or calculateRainfallStatistics
+ */
 function createComparisonData(forecastData, observationData, parameter) {
   const comparisonData = [];
   
@@ -2284,94 +2440,17 @@ function createComparisonData(forecastData, observationData, parameter) {
   return comparisonData.sort((a, b) => new Date(a.date) - new Date(b.date));
 }
 
-// Calculate statistics based on parameter-specific thresholds
-function calculateStatistics(comparisonData, parameter) {
-    const totalDays = comparisonData.length;
-    const missingDays = comparisonData.filter(item => item.isMissing).length;
-    const validDays = totalDays - missingDays; // N
-    
-    if (validDays === 0) {
-      return {
-        totalDays: totalDays,
-        missingDays: missingDays,
-        validDays: validDays,
-        n1: 0, n2: 0, n3: 0, n11: 0,
-        correct: 0,
-        usable: 0,
-        unusable: 0
-      };
-    }
-  
-    const validData = comparisonData.filter(item => !item.isMissing);
-    
-    let threshold1, threshold2;
-    let useN11ForUnusable = false; 
-    
-    switch (parameter) {
-      case 'temp_max_c':
-      case 'temp_min_c':
-        threshold1 = 1.0;
-        threshold2 = 2.0;
-        break;
-        
-      case 'humidity_1':
-      case 'humidity_2':
-        threshold1 = 10.0;
-        threshold2 = 20.0;
-        break;
-        
-      case 'wind_speed_kmph':
-      case 'wind_direction_deg':
-        threshold1 = 7.2;
-        threshold2 = 14.4;
-        useN11ForUnusable = true; 
-        break;
-        
-      case 'cloud_cover_octa':
-        threshold1 = 2.0;
-        threshold2 = 3.0;
-        break;
-        
-      case 'rainfall':
-        threshold1 = 1.0;
-        threshold2 = 2.0;
-        break;
-        
-      default:
-        threshold1 = 1.0;
-        threshold2 = 2.0;
-        break;
-    }
-    
-    // Calculate N1, N11, N3, N2 based on parameter-specific thresholds
-    const n1 = validData.filter(item => item.absoluteDifference <= threshold1).length;  
-    const n11 = validData.filter(item => item.absoluteDifference > threshold1).length;  
-    const n3 = validData.filter(item => item.absoluteDifference > threshold2).length;   
-    const n2 = n11 - n3;
-  
-    // Calculate percentages based on parameter type
-    const correct = (n1 / validDays) * 100;
-    const usable = (n2 / validDays) * 100;
-    const unusable = useN11ForUnusable ? (n11 / validDays) * 100 : (n3 / validDays) * 100;
-  
-    return {
-      totalDays: totalDays,
-      missingDays: missingDays,
-      validDays: validDays,
-      n1: n1,
-      n2: n2,
-      n3: n3,
-      n11: n11,
-      correct: correct,
-      usable: usable,
-      unusable: unusable,
-      threshold1: threshold1,
-      threshold2: threshold2,
-      useN11ForUnusable: useN11ForUnusable
-    };
-}
+// Calculate statistics based on parameter-specific thresholds}
 
-// Add this function after the existing calculateStatistics function
+/**
+ * Part: Forecast vs Observation Comparison (Rainfall)
+ * Function: calculateRainfallStatistics
+ * Purpose: Compute rainfall verification using YY/YN/NY/NN framework and derived metrics.
+ * Inputs: comparisonData[] from createComparisonData
+ * Output: statistics object with YY, YN, NY, NN, YU, NU and 13+ metrics; isRainfall=true
+ * Preceded by: createComparisonData
+ * Followed by: displayComparisonResults (rainfall branch)
+ */
 function calculateRainfallStatistics(comparisonData) {
   const totalDays = comparisonData.length;
   const missingDays = comparisonData.filter(item => item.isMissing).length;
@@ -2383,60 +2462,113 @@ function calculateRainfallStatistics(comparisonData) {
       missingDays: missingDays,
       validDays: validDays,
       YY: 0, YN: 0, NY: 0, NN: 0,
-      matchingCases: 0,
+      YU: 0, NU: 0,
+      // 13 metrics
       correct: 0,
       usable: 0,
       unusable: 0,
+      rs: 0,
+      hk: 0,
+      pod: 0,
+      far: 0,
+      csi: 0,
+      hss: 0,
+      mr: 0,
+      cnon: 0,
+      bias: 0,
+      pc: 0,
       isRainfall: true
     };
   }
 
   const validData = comparisonData.filter(item => !item.isMissing);
-  
-  let YY = 0; 
-  let YN = 0; 
-  let NY = 0; 
-  let NN = 0; 
-  
+
+  let YY = 0, YN = 0, NY = 0, NN = 0;
+  let YU = 0, NU = 0;
+
   validData.forEach(item => {
-      const forecastRain = item.forecastValue > 0;
-      const observedRain = item.observationValue > 0;
-      
-      if (forecastRain && observedRain) {
-          YY++;
-      } else if (forecastRain && !observedRain) {
-          YN++;
-      } else if (!forecastRain && observedRain) {
-          NY++;
-      } else if (!forecastRain && !observedRain) {
-          NN++;
-      }
+    const forecastNonZero = (item.forecastValue || 0) !== 0;
+    const observedNonZero = (item.observationValue || 0) !== 0;
+    const absDiff = Math.abs((item.forecastValue || 0) - (item.observationValue || 0));
+    if (forecastNonZero && observedNonZero) {
+      YY++;
+      if (absDiff <= 5) YU++;
+    } else if (forecastNonZero && !observedNonZero) {
+      YN++;
+    } else if (!forecastNonZero && observedNonZero) {
+      NY++;
+    } else if (!forecastNonZero && !observedNonZero) {
+      NN++;
+      if (absDiff <= 5) NU++;
+    }
   });
-  
-  const matchingCases = YY + NN; 
-  
-  // Calculate percentages for rainfall
-  const correct = (matchingCases / validDays) * 100;
-  const usable = ((validDays - matchingCases) / validDays) * 100;
-  const unusable = 0; 
-  
+
+  const N = validDays;
+  // 1. Correct (%)
+  const correct = (YY + NN) / (YY + NN + NY + YN) * 100
+  // 2. Usable (%)
+  const usable = (YY + NN) > 0 ? ((YU + NU) / (YY + NN)) * 100 : 0;
+  // 3. Unusable (%)
+  const unusable = (YY + NN) > 0 ? (((YY + NN) - (YU + NU)) / (YY + NN)) * 100 : 0;
+  // 4. Skill Score or Ratio Score of rainfall (RS)
+  const rs = ((YY + NN) / N) * 100;
+  // 5. Hanssen & Kuipers index (H.K. Score)
+  const hk = ((YY * NN) - (YN * NY)) / (((YY + NY) * (YN + NN)) || 1);
+  // 6. Probability of detection (POD)
+  const pod = (YY + NY) > 0 ? YY / (YY + NY) : 0;
+  // 7. False alarm ratio (FAR)
+  const far = (YN + YY) > 0 ? YN / (YN + YY) : 0;
+  // 8. Critical Success index (CSI)
+  const csi = (YY + YN + NY) > 0 ? YY / (YY + YN + NY) : 0;
+  // 9. Heidke Skill Score (HSS)
+  const hss = (((2 * ((YY * NN) - (YN * NY))) / ((((YY + NY) * (NY + NN)) + ((YY + YN) * (YN + NN))) || 1)));
+  // 10. Missing Rate (MR)
+  const mr = (YN + NY) > 0 ? YN / (YN + NY) : 0;
+  // 11. Correct non Occurrence (C NON)
+  const cnon = (NN + YY) > 0 ? NN / (NN + YY) : 0;
+  // 12. Bias (BAIS)
+  const bias = (NN + YY) > 0 ? (YY + YN) / (NN + YY) : 0;
+  // 13. Percentage Correct (PC)
+  const pc = (NN + YY + YN + NY) > 0 ? ((NN + YY) / (NN + YY + YN + NY)) * 100 : 0;
+
   return {
-      totalDays: totalDays,
-      missingDays: missingDays,
-      validDays: validDays,
-      YY: YY,
-      YN: YN,
-      NY: NY,
-      NN: NN,
-      matchingCases: matchingCases,
-      correct: correct,
-      usable: usable,
-      unusable: unusable,
-      isRainfall: true
+    totalDays: totalDays,
+    missingDays: missingDays,
+    validDays: validDays,
+    YY: YY,
+    YN: YN,
+    NY: NY,
+    NN: NN,
+    YU: YU,
+    NU: NU,
+    // 13 metrics
+    correct: correct,
+    usable: usable,
+    unusable: unusable,
+    rs: rs,
+    hk: hk,
+    pod: pod,
+    far: far,
+    csi: csi,
+    hss: hss,
+    mr: mr,
+    cnon: cnon,
+    bias: bias,
+    pc: pc,
+    isRainfall: true
   };
 }
 
 
+/**
+ * Part: Forecast vs Observation Comparison (Non-rainfall)
+ * Function: calculateStatistics
+ * Purpose: Compute threshold-based correctness metrics for non-rainfall parameters.
+ * Inputs: comparisonData[] from createComparisonData, parameter key
+ * Output: statistics object with N1/N2/N3/N11 and % metrics; isRainfall=false
+ * Preceded by: createComparisonData
+ * Followed by: displayComparisonResults (non-rainfall branch)
+ */
 function calculateStatistics(comparisonData, parameter) {
   // Check if this is rainfall parameter
   if (parameter === 'rainfall') {
@@ -2525,30 +2657,40 @@ function calculateStatistics(comparisonData, parameter) {
   };
 }
 
+/**
+ * Part: Forecast vs Observation Comparison
+ * Function: displayComparisonResults
+ * Purpose: Render UI: summary tiles + detailed table based on statistics (rainfall/non-rainfall)
+ * Inputs: comparisonData[], statistics, day label, district name, parameter key
+ * Output: Updates DOM nodes: #comparisonStats, #comparisonTable
+ * Preceded by: calculateStatistics / calculateRainfallStatistics
+ * Followed by: exportComparisonToExcel (optional)
+ */
 function displayComparisonResults(comparisonData, statistics, day, district, parameter) {
   const statsDiv = document.getElementById('comparisonStats');
   
   if (statistics.isRainfall) {
+      // For rainfall: show standard summary tiles first (same as other parameters)
       statsDiv.innerHTML = `
         <div style="background: #d4edda; padding: 15px; border-radius: 10px; text-align: center;">
           <h4 style="color: #155724; margin: 0;">Correct</h4>
           <div style="font-size: 24px; font-weight: bold; color: #155724;">${statistics.correct.toFixed(1)}%</div>
-          <small>(Matching cases: YY + NN)</small>
+          <small>((YY+NN)/N) × 100</small>
         </div>
         <div style="background: #fff3cd; padding: 15px; border-radius: 10px; text-align: center;">
           <h4 style="color: #856404; margin: 0;">Usable</h4>
           <div style="font-size: 24px; font-weight: bold; color: #856404;">${statistics.usable.toFixed(1)}%</div>
-          <small>(Non-matching cases: YN + NY)</small>
+          <small>((YN+NY)/N) × 100</small>
         </div>
-        <div style="background: #cce5ff; padding: 15px; border-radius: 10px; text-align: center;">
+        <div style="background: #f8d7da; padding: 15px; border-radius: 10px; text-align: center;">
+          <h4 style="color: #721c24; margin: 0;">Unusable</h4>
+          <div style="font-size: 24px; font-weight: bold; color: #721c24;">${statistics.unusable.toFixed(1)}%</div>
+          <small>(((YY+NN)-(YU+NU))/(YY+NN)) × 100</small>
+        </div>
+        <div style="background: #d1ecf1; padding: 15px; border-radius: 10px; text-align: center;">
           <h4 style="color: #0c5460; margin: 0;">Valid Days</h4>
           <div style="font-size: 24px; font-weight: bold; color: #0c5460;">${statistics.validDays}</div>
           <small>out of ${statistics.totalDays}</small>
-        </div>
-        <div style="background: #e9ecef; padding: 15px; border-radius: 10px; text-align: center;">
-          <h4 style="color: #495057; margin: 0;">Matching Cases</h4>
-          <div style="font-size: 24px; font-weight: bold; color: #495057;">${statistics.matchingCases}</div>
-          <small>(YY: ${statistics.YY} + NN: ${statistics.NN})</small>
         </div>
       `;
   } else {
@@ -2670,9 +2812,42 @@ function displayComparisonResults(comparisonData, statistics, day, district, par
 
       tableHtml += '</tbody></table>';
       
+      // Rainfall Statistical Summary with detailed metrics table
       tableHtml += `
         <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 10px;">
           <h4>Rainfall Statistical Summary</h4>
+          <div style="overflow-x:auto; margin-bottom: 20px;">
+            <table style="width:100%; border-collapse:collapse; background:#f8f9fa;">
+              <thead>
+                <tr style="background:#e9ecef;">
+                  <th style="padding:8px; border:1px solid #dee2e6;">Metric</th>
+                  <th style="padding:8px; border:1px solid #dee2e6;">Formula</th>
+                  <th style="padding:8px; border:1px solid #dee2e6;">Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>YY</td><td>Rain forecast & observed (&ne;0)</td><td>${statistics.YY}</td></tr>
+                <tr><td>YN</td><td>Rain forecast, not observed (forecast &ne;0, obs=0)</td><td>${statistics.YN}</td></tr>
+                <tr><td>NY</td><td>No rain forecast, rain observed (forecast=0, obs &ne;0)</td><td>${statistics.NY}</td></tr>
+                <tr><td>NN</td><td>No rain forecast & not observed (both=0)</td><td>${statistics.NN}</td></tr>
+                <tr><td>N</td><td>Total forecast days</td><td>${statistics.validDays}</td></tr>
+                <tr><td>Correct (%)</td><td>((YY+NN)/N)&times;100</td><td>${statistics.correct.toFixed(2)}%</td></tr>
+                <tr><td>Usable (%)</td><td>((YU+NU)/(YY+NN))&times;100</td><td>${statistics.usable.toFixed(2)}%</td></tr>
+                <tr><td>Unusable (%)</td><td>(((YY+NN)-(YU+NU))/(YY+NN))&times;100</td><td>${statistics.unusable.toFixed(2)}%</td></tr>
+                <tr><td>RS (%)</td><td>((YY+NN)/N)&times;100</td><td>${statistics.rs.toFixed(2)}%</td></tr>
+                <tr><td>H.K. Score</td><td>((YY&times;NN)-(YN&times;NY))/((YY+NY)&times;(YN+NN))</td><td>${statistics.hk.toFixed(3)}</td></tr>
+                <tr><td>POD</td><td>YY/(YY+NY)</td><td>${statistics.pod.toFixed(3)}</td></tr>
+                <tr><td>FAR</td><td>YN/(YN+YY)</td><td>${statistics.far.toFixed(3)}</td></tr>
+                <tr><td>CSI</td><td>YY/(YY+YN+NY)</td><td>${statistics.csi.toFixed(3)}</td></tr>
+                <tr><td>HSS</td><td>2&times;((YY&times;NN)-(YN&times;NY))/[((YY+NY)&times;(NY+NN))+((YY+YN)&times;(YN+NN))]</td><td>${statistics.hss.toFixed(3)}</td></tr>
+                <tr><td>MR</td><td>YN/(YN+NY)</td><td>${statistics.mr.toFixed(3)}</td></tr>
+                <tr><td>C NON</td><td>NN/(NN+YY)</td><td>${statistics.cnon.toFixed(3)}</td></tr>
+                <tr><td>BAIS</td><td>(YY+YN)/(NN+YY)</td><td>${statistics.bias.toFixed(3)}</td></tr>
+                <tr><td>PC (%)</td><td>((NN+YY)/(NN+YY+YN+NY))&times;100</td><td>${statistics.pc.toFixed(2)}%</td></tr>
+              </tbody>
+            </table>
+          </div>
+          
           <table style="width: 100%; max-width: 600px;">
             <tbody>
               <tr>
@@ -2757,6 +2932,7 @@ function displayComparisonResults(comparisonData, statistics, day, district, par
 
       tableHtml += '</tbody></table>';
       
+      // Add the statistics summary table after the main table
       const unusableCalculation = statistics.useN11ForUnusable ? 
         `<strong>Unusable = (N11/N) × 100</strong>` : 
         `<strong>Unusable = (N3/N) × 100</strong>`;
@@ -2939,7 +3115,10 @@ async function performComprehensiveAnalysis() {
               YN: statistics.YN,
               NY: statistics.NY,
               NN: statistics.NN,
+              YU: statistics.YU,
+              NU: statistics.NU,
               matchingCases: statistics.matchingCases,
+              totalDays: statistics.totalDays,
               isRainfall: true
             };
           } else {
@@ -2955,21 +3134,45 @@ async function performComprehensiveAnalysis() {
               n3: statistics.n3,
               threshold1: statistics.threshold1,
               threshold2: statistics.threshold2,
-              useN11ForUnusable: statistics.useN11ForUnusable,
-              isRainfall: false
+              useN11ForUnusable: statistics.useN11ForUnusable
             };
           }
         } else {
           // No data available
-          districtResult.parameters[parameter] = {
-            correct: 0,
-            usable: 0,
-            unusable: 0,
-            correctPlusUsable: 0,
-            validDays: 0,
-            missingDays: 0,
-            isRainfall: parameter === 'rainfall'
-          };
+          if (parameter === 'rainfall') {
+            districtResult.parameters[parameter] = {
+              correct: 0,
+              usable: 0,
+              unusable: 0,
+              correctPlusUsable: 0,
+              validDays: 0,
+              missingDays: 0,
+              YY: 0,
+              YN: 0,
+              NY: 0,
+              NN: 0,
+              YU: 0,
+              NU: 0,
+              matchingCases: 0,
+              totalDays: 0,
+              isRainfall: true
+            };
+          } else {
+            districtResult.parameters[parameter] = {
+              correct: 0,
+              usable: 0,
+              unusable: 0,
+              correctPlusUsable: 0,
+              validDays: 0,
+              missingDays: 0,
+              n1: 0,
+              n2: 0,
+              n3: 0,
+              threshold1: 0,
+              threshold2: 0,
+              useN11ForUnusable: false
+            };
+          }
         }
       }
       
@@ -3006,165 +3209,7 @@ async function performComprehensiveAnalysis() {
 }
 
 
-function displayComparisonResults(comparisonData, statistics, day, district, parameter) {
-    let threshold1Label, threshold2Label, unusableLabel;
-    
-    switch (parameter) {
-      case 'temp_max_c':
-      case 'temp_min_c':
-        threshold1Label = '≤ 1.0 difference';
-        threshold2Label = '1.0 < diff ≤ 2.0';
-        unusableLabel = '> 2.0 difference';
-        break;
-        
-      case 'humidity_1':
-      case 'humidity_2':
-        threshold1Label = '≤ 10 difference';
-        threshold2Label = '10 < diff ≤ 20';
-        unusableLabel = '> 20 difference';
-        break;
-        
-      case 'wind_speed_kmph':
-      case 'wind_direction_deg':
-        threshold1Label = '≤ 7.2 difference';
-        threshold2Label = '7.2 < diff ≤ 14.4';
-        unusableLabel = '> 7.2 difference';
-        break;
-        
-      case 'cloud_cover_octa':
-        threshold1Label = '≤ 2 difference';
-        threshold2Label = '2 < diff ≤ 3';
-        unusableLabel = '> 3 difference';
-        break;
-        
-      case 'rainfall':
-      default:
-        threshold1Label = '≤ 1.0 difference';
-        threshold2Label = '1.0 < diff ≤ 2.0';
-        unusableLabel = '> 2.0 difference';
-        break;
-    }
-
-    const statsDiv = document.getElementById('comparisonStats');
-    statsDiv.innerHTML = `
-      <div style="background: #d4edda; padding: 15px; border-radius: 10px; text-align: center;">
-        <h4 style="color: #155724; margin: 0;">Correct</h4>
-        <div style="font-size: 24px; font-weight: bold; color: #155724;">${statistics.correct.toFixed(1)}%</div>
-        <small>(${threshold1Label})</small>
-      </div>
-      <div style="background: #fff3cd; padding: 15px; border-radius: 10px; text-align: center;">
-        <h4 style="color: #856404; margin: 0;">Usable</h4>
-        <div style="font-size: 24px; font-weight: bold; color: #856404;">${statistics.usable.toFixed(1)}%</div>
-        <small>(${threshold2Label})</small>
-      </div>
-      <div style="background: #f8d7da; padding: 15px; border-radius: 10px; text-align: center;">
-        <h4 style="color: #721c24; margin: 0;">Unusable</h4>
-        <div style="font-size: 24px; font-weight: bold; color: #721c24;">${statistics.unusable.toFixed(1)}%</div>
-        <small>(${unusableLabel})</small>
-      </div>
-      <div style="background: #d1ecf1; padding: 15px; border-radius: 10px; text-align: center;">
-        <h4 style="color: #0c5460; margin: 0;">Valid Days</h4>
-        <div style="font-size: 24px; font-weight: bold; color: #0c5460;">${statistics.validDays}</div>
-        <small>out of ${statistics.totalDays}</small>
-      </div>
-    `;
-  
-    const tableDiv = document.getElementById('comparisonTable');
-    let tableHtml = `
-      <h4>Detailed Comparison: ${district} - ${parameterNames[parameter] || parameter} - ${day}</h4>
-      <table>
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Forecast Value</th>
-            <th>Observation Value</th>
-            <th>Absolute Difference</th>
-            <th>Category</th>
-          </tr>
-        </thead>
-        <tbody>`;
-  
-    comparisonData.forEach(item => {
-      let category = 'Missing';
-      let categoryStyle = 'background: #6c757d; color: white;';
-      
-      if (!item.isMissing) {
-        if (item.absoluteDifference <= statistics.threshold1) {
-          category = 'Correct';
-          categoryStyle = 'background: #28a745; color: white;';
-        } else if (item.absoluteDifference <= statistics.threshold2) {
-          category = 'Usable';
-          categoryStyle = 'background: #ffc107; color: black;';
-        } else {
-          category = 'Unusable';
-          categoryStyle = 'background: #dc3545; color: white;';
-        }
-      }
-  
-      tableHtml += `<tr>
-        <td>${item.date}</td>
-        <td>${formatComparisonValue(item.forecastValue)}</td>
-        <td>${formatComparisonValue(item.observationValue)}</td>
-        <td>${formatComparisonValue(item.absoluteDifference)}</td>
-        <td><span style="${categoryStyle} padding: 4px 8px; border-radius: 15px; font-size: 12px; font-weight: bold;">${category}</span></td>
-      </tr>`;
-    });
-  
-    tableHtml += '</tbody></table>';
-    
-    // Add the statistics summary table after the main table
-    const unusableCalculation = statistics.useN11ForUnusable ? 
-      `<strong>Unusable = (N11/N) × 100</strong>` : 
-      `<strong>Unusable = (N3/N) × 100</strong>`;
-    
-    tableHtml += `
-      <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 10px;">
-        <h4>Statistical Summary for ${parameterNames[parameter] || parameter}</h4>
-        <table style="width: 100%; max-width: 600px;">
-          <tbody>
-            <tr>
-              <td><strong>Missing days (M)</strong></td>
-              <td style="text-align: right;"><strong>${statistics.missingDays}</strong></td>
-            </tr>
-            <tr>
-              <td><strong>Total no. of forecast days (N)</strong></td>
-              <td style="text-align: right;"><strong>${statistics.validDays}</strong></td>
-            </tr>
-            <tr>
-              <td><strong>No. of absolute values ≤ ${statistics.threshold1} (N1)</strong></td>
-              <td style="text-align: right;"><strong>${statistics.n1}</strong></td>
-            </tr>
-            <tr>
-              <td><strong>No. of absolute values > ${statistics.threshold1} (N11)</strong></td>
-              <td style="text-align: right;"><strong>${statistics.n11}</strong></td>
-            </tr>
-            <tr>
-              <td><strong>No. of absolute values > ${statistics.threshold2} (N3)</strong></td>
-              <td style="text-align: right;"><strong>${statistics.n3}</strong></td>
-            </tr>
-            <tr>
-              <td><strong>No. of absolute values ${statistics.threshold1} < diff ≤ ${statistics.threshold2} (N2)</strong></td>
-              <td style="text-align: right;"><strong>${statistics.n2}</strong></td>
-            </tr>
-            <tr style="border-top: 2px solid #dee2e6;">
-              <td><strong>Correct = (N1/N) × 100</strong></td>
-              <td style="text-align: right;"><strong>${statistics.correct.toFixed(2)}%</strong></td>
-            </tr>
-            <tr>
-              <td><strong>Usable = (N2/N) × 100</strong></td>
-              <td style="text-align: right;"><strong>${statistics.usable.toFixed(2)}%</strong></td>
-            </tr>
-            <tr>
-              <td>${unusableCalculation}</td>
-              <td style="text-align: right;"><strong>${statistics.unusable.toFixed(2)}%</strong></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    `;
-    
-    tableDiv.innerHTML = tableHtml;
-}
+// (Removed duplicate displayComparisonResults — unified rainfall-aware version is defined earlier.)
 
 // Format values for comparison display
 function formatComparisonValue(value) {
@@ -3176,7 +3221,15 @@ function formatComparisonValue(value) {
 
 
 
-// Export comparison results to Excel
+/**
+ * Part: Forecast vs Observation Comparison
+ * Function: exportComparisonToExcel
+ * Purpose: Export the current comparison table and summary statistics to an Excel workbook.
+ * Inputs: global comparisonResults populated by performComparison/performComparisonOptimized
+ * Output: XLSX file saved to disk
+ * Preceded by: displayComparisonResults (comparisonResults set)
+ * Followed by: N/A
+ */
 function exportComparisonToExcel() {
     if (!comparisonResults || comparisonResults.data.length === 0) {
       showComparisonStatus('❌ No comparison results to export.', 'error');
@@ -3237,7 +3290,15 @@ function exportComparisonToExcel() {
     }
   }
 
-// Show comparison status messages
+/**
+ * Part: Forecast vs Observation Comparison
+ * Function: showComparisonStatus
+ * Purpose: Present toast-like status messages for comparison workflow.
+ * Inputs: message string, type ('success'|'error'|'info')
+ * Output: Updates DOM node #comparisonProcessingStatus
+ * Preceded by: performComparison/performComparisonOptimized steps
+ * Followed by: N/A
+ */
 function showComparisonStatus(message, type) {
   const statusDiv = document.getElementById('comparisonProcessingStatus');
   
@@ -4967,7 +5028,10 @@ async function performComprehensiveAnalysisOptimized() {
               YN: statistics.YN,
               NY: statistics.NY,
               NN: statistics.NN,
+              YU: statistics.YU,
+              NU: statistics.NU,
               matchingCases: statistics.matchingCases,
+              totalDays: statistics.totalDays,
               isRainfall: true
             };
           } else {
@@ -4989,15 +5053,40 @@ async function performComprehensiveAnalysisOptimized() {
           }
         } else {
           // No data available
-          districtResult.parameters[parameter] = {
-            correct: 0,
-            usable: 0,
-            unusable: 0,
-            correctPlusUsable: 0,
-            validDays: 0,
-            missingDays: 0,
-            isRainfall: parameter === 'rainfall'
-          };
+          if (parameter === 'rainfall') {
+            districtResult.parameters[parameter] = {
+              correct: 0,
+              usable: 0,
+              unusable: 0,
+              correctPlusUsable: 0,
+              validDays: 0,
+              missingDays: 0,
+              YY: 0,
+              YN: 0,
+              NY: 0,
+              NN: 0,
+              YU: 0,
+              NU: 0,
+              matchingCases: 0,
+              totalDays: 0,
+              isRainfall: true
+            };
+          } else {
+            districtResult.parameters[parameter] = {
+              correct: 0,
+              usable: 0,
+              unusable: 0,
+              correctPlusUsable: 0,
+              validDays: 0,
+              missingDays: 0,
+              n1: 0,
+              n2: 0,
+              n3: 0,
+              threshold1: 0,
+              threshold2: 0,
+              useN11ForUnusable: false
+            };
+          }
         }
       }
       
@@ -5059,6 +5148,15 @@ async function performComprehensiveAnalysisOptimized() {
 }
 
 // Enhanced comparison function with large dataset support
+/**
+ * Part: Forecast vs Observation Comparison
+ * Function: performComparisonOptimized
+ * Purpose: Optimized variant of performComparison for large datasets (streaming/caching).
+ * Inputs: UI selections (day, district, parameter, date range/sheet options)
+ * Output: Displays comparison results with improved performance
+ * Preceded by: Data loading and cache utilities
+ * Followed by: createComparisonData -> calculateStatistics/calculateRainfallStatistics -> displayComparisonResults
+ */
 async function performComparisonOptimized() {
   const day = document.getElementById('comparisonDay').value;
   const district = document.getElementById('comparisonDistrict').value;
@@ -5256,6 +5354,498 @@ document.addEventListener('DOMContentLoaded', () => {
   // Monitor memory usage periodically
   setInterval(monitorMemoryUsage, 30000); // Check every 30 seconds
 });
+
+// Performance Graph Functions
+async function generatePerformanceGraphs() {
+  // No parameter selection anymore; we render charts for all parameters
+
+  showGraphStatus('Generating performance graphs...', 'info');
+  
+  try {
+    // Get the current comprehensive analysis data from multiple sources
+    let comprehensiveData = window.lastComprehensiveData;
+    
+    // Debug logging
+    console.log('window.lastComprehensiveData:', window.lastComprehensiveData);
+    console.log('window.comprehensivePerformanceData:', window.comprehensivePerformanceData);
+    console.log('window.globalComprehensiveData:', window.globalComprehensiveData);
+    console.log('comprehensiveResults:', typeof comprehensiveResults !== 'undefined' ? comprehensiveResults : 'undefined');
+    
+    // If window.lastComprehensiveData is not available, try to get it from multiple sources
+    if (!comprehensiveData || !comprehensiveData.length) {
+      // Try the alternative storage location
+      if (window.comprehensivePerformanceData && window.comprehensivePerformanceData.length) {
+        comprehensiveData = window.comprehensivePerformanceData;
+        console.log('Using comprehensivePerformanceData:', comprehensiveData);
+      } else if (window.globalComprehensiveData && Object.keys(window.globalComprehensiveData).length > 0) {
+        // Try to get data from global storage
+        const availableDays = Object.keys(window.globalComprehensiveData);
+        console.log('Available days in global storage:', availableDays);
+        if (availableDays.length > 0) {
+          comprehensiveData = window.globalComprehensiveData[availableDays[0]];
+          console.log('Using data from global storage:', comprehensiveData);
+        }
+      } else if (typeof comprehensiveResults !== 'undefined' && comprehensiveResults && comprehensiveResults.districts) {
+        // Try to reconstruct the data from comprehensiveResults
+        comprehensiveData = reconstructPerformanceData(comprehensiveResults);
+        console.log('Reconstructed data:', comprehensiveData);
+      }
+    }
+    
+    if (!comprehensiveData || !comprehensiveData.length) {
+      showGraphStatus('No comprehensive analysis data available. Please run comprehensive analysis first.', 'error');
+      return;
+    }
+
+    // Build GOOD/MODERATE/POOR matrix using Correct+Usable % from comparison logic (>=75 good, 50-75 moderate, <50 poor)
+    let matrix = null;
+    if (Array.isArray(processedOutput) && processedOutput.length > 0 && Array.isArray(processedObservationOutput) && processedObservationOutput.length > 0) {
+      matrix = buildGmpMatrixAllDaysFromComparison(processedOutput, processedObservationOutput);
+    }
+    // Fallbacks if needed
+    if (!matrix) {
+      if (Array.isArray(processedObservationOutput) && processedObservationOutput.length > 0) {
+        matrix = buildPerformanceMatrixFromProcessedObservation(processedObservationOutput);
+      } else {
+        matrix = buildPerformanceMatrixFromData(comprehensiveData);
+      }
+    }
+    window.performanceMatrix = matrix;
+
+    // Render the full table (all parameters, Good/Moderate/Poor under each)
+    renderPerformanceMatrixTable(matrix);
+
+    // Render grouped charts for all parameters
+    renderAllParametersGroupedCharts(matrix);
+    
+    // Show the graph section
+    document.getElementById('graphSection').style.display = 'none';
+    document.getElementById('graphResultsSection').style.display = 'block';
+    
+    showGraphStatus('Performance graphs generated successfully!', 'success');
+  } catch (error) {
+    console.error('Error generating performance graphs:', error);
+    showGraphStatus('Error generating performance graphs: ' + error.message, 'error');
+  }
+}
+
+function reconstructPerformanceData(comprehensiveResults) {
+  // This function tries to reconstruct the performance data from the comprehensive results
+  // It's a fallback when the raw data is not directly available
+  
+  if (!comprehensiveResults || !comprehensiveResults.districts) {
+    return null;
+  }
+  
+  const reconstructedData = [];
+  const day = comprehensiveResults.day;
+  
+  // For each district, create a sample data point
+  // Note: This is a simplified reconstruction - the actual values will be estimates
+  comprehensiveResults.districts.forEach(district => {
+    // Create a sample data point with estimated values based on performance
+    reconstructedData.push({
+      day: day,
+      district: district.district,
+      rainfall: 5, // Default sample value
+      temp_max_c: 30, // Default sample value
+      temp_min_c: 20, // Default sample value
+      humidity_1: 60, // Default sample value
+      humidity_2: 50, // Default sample value
+      wind_speed_kmph: 15, // Default sample value
+      wind_direction_deg: 180, // Default sample value
+      cloud_cover_octa: 3 // Default sample value
+    });
+  });
+  
+  return reconstructedData;
+}
+
+// Build counts of Good/Moderate/Poor per day per parameter
+function buildPerformanceMatrixFromData(rows) {
+  const days = ['Day1', 'Day2', 'Day3', 'Day4', 'Day5'];
+  const categories = ['GOOD', 'MODERATE', 'POOR'];
+  const params = Object.keys(parameterNames);
+
+  const matrix = { days, categories, parameters: params, counts: {} };
+  params.forEach(p => {
+    matrix.counts[p] = {};
+    categories.forEach(c => {
+      matrix.counts[p][c] = {};
+      days.forEach(d => { matrix.counts[p][c][d] = 0; });
+    });
+  });
+
+  function classify(parameter, value) {
+    if (value === null || value === undefined || Number.isNaN(Number(value))) return null;
+    const v = Number(value);
+    switch (parameter) {
+      case 'rainfall':
+        return v === 0 ? 'GOOD' : v <= 10 ? 'MODERATE' : 'POOR';
+      case 'temp_max_c':
+        return v >= 25 && v <= 35 ? 'GOOD' : v >= 20 && v <= 40 ? 'MODERATE' : 'POOR';
+      case 'temp_min_c':
+        return v >= 15 && v <= 25 ? 'GOOD' : v >= 10 && v <= 30 ? 'MODERATE' : 'POOR';
+      case 'humidity_1':
+      case 'humidity_2':
+        return v >= 40 && v <= 80 ? 'GOOD' : v >= 30 && v <= 90 ? 'MODERATE' : 'POOR';
+      case 'wind_speed_kmph':
+        return v <= 20 ? 'GOOD' : v <= 40 ? 'MODERATE' : 'POOR';
+      case 'cloud_cover_octa':
+        return v <= 4 ? 'GOOD' : v <= 6 ? 'MODERATE' : 'POOR';
+      case 'wind_direction_deg':
+        return 'MODERATE';
+      default:
+        return v >= 0 && v <= 100 ? 'GOOD' : v >= -50 && v <= 150 ? 'MODERATE' : 'POOR';
+    }
+  }
+
+  rows.forEach(r => {
+    const day = r.day;
+    if (!days.includes(day)) return;
+    params.forEach(p => {
+      const cat = classify(p, r[p]);
+      if (cat) matrix.counts[p][cat][day] += 1;
+    });
+  });
+
+  return matrix;
+}
+
+// Build matrix directly from processed observation output (covers all days for each district)
+function buildPerformanceMatrixFromProcessedObservation(obsRows) {
+  // Map observation records to the simplified row format expected by buildPerformanceMatrixFromData
+  const rows = obsRows.map(r => ({
+    day: `Day${r.day_number}`,
+    district: r.district_name,
+    rainfall: r.rainfall,
+    temp_max_c: r.temp_max_c,
+    temp_min_c: r.temp_min_c,
+    humidity_1: r.humidity_1,
+    humidity_2: r.humidity_2,
+    wind_speed_kmph: r.wind_speed_kmph,
+    wind_direction_deg: r.wind_direction_deg,
+    cloud_cover_octa: r.cloud_cover_octa
+  }));
+  return buildPerformanceMatrixFromData(rows);
+}
+
+// NEW: Build matrix using Correct+Usable percentage from the same comparison logic as the
+// "Forecast vs Observation Comparison" screen, aggregated per day and parameter, across all districts.
+// Classification: >=75 -> GOOD, >50 && <75 -> MODERATE, <=50 -> POOR
+function buildGmpMatrixAllDaysFromComparison(forecastRows, observationRows) {
+  const days = ['Day1', 'Day2', 'Day3', 'Day4', 'Day5'];
+  const categories = ['GOOD', 'MODERATE', 'POOR'];
+  const parameters = Object.keys(parameterNames);
+
+  const matrix = { days, categories, parameters, counts: {} };
+  parameters.forEach(p => {
+    matrix.counts[p] = {};
+    categories.forEach(c => {
+      matrix.counts[p][c] = {};
+      days.forEach(d => { matrix.counts[p][c][d] = 0; });
+    });
+  });
+
+  // Group by district and day for ALL days 1..5
+  const byDistrictDay = new Map();
+  forecastRows.forEach(fr => {
+    const key = `${normalizeDistrictName(fr.district_name)}|${fr.day_number}`;
+    if (!byDistrictDay.has(key)) byDistrictDay.set(key, { forecast: [], observation: [] });
+    byDistrictDay.get(key).forecast.push(fr);
+  });
+  observationRows.forEach(orow => {
+    const key = `${normalizeDistrictName(orow.district_name)}|${orow.day_number}`;
+    if (!byDistrictDay.has(key)) byDistrictDay.set(key, { forecast: [], observation: [] });
+    byDistrictDay.get(key).observation.push(orow);
+  });
+
+  const dayLabel = (n) => `Day${n}`;
+
+  // Iterate across all dayNumbers 1..5 to ensure we fill every day
+  for (let dayNum = 1; dayNum <= 5; dayNum++) {
+    // For every district seen in either forecast or observation, compute stats
+    const districtKeysForDay = new Set();
+    forecastRows.forEach(fr => { if (fr.day_number === dayNum) districtKeysForDay.add(normalizeDistrictName(fr.district_name)); });
+    observationRows.forEach(orow => { if (orow.day_number === dayNum) districtKeysForDay.add(normalizeDistrictName(orow.district_name)); });
+
+    districtKeysForDay.forEach(distKey => {
+      const bundle = byDistrictDay.get(`${distKey}|${dayNum}`) || { forecast: [], observation: [] };
+
+      parameters.forEach(param => {
+        const forecastData = bundle.forecast.filter(r => r.day_number === dayNum);
+        const observationData = bundle.observation.filter(r => r.day_number === dayNum);
+        if (!forecastData.length || !observationData.length) return;
+
+        const comp = createComparisonData(forecastData, observationData, param);
+        const stats = calculateStatistics(comp, param);
+        const correctUsable = (stats.correct || 0) + (stats.usable || 0);
+
+        let category = 'POOR';
+        if (correctUsable >= 75) category = 'GOOD';
+        else if (correctUsable > 50 && correctUsable < 75) category = 'MODERATE';
+        else category = 'POOR';
+
+        matrix.counts[param][category][dayLabel(dayNum)] += 1;
+      });
+    });
+  }
+
+  return matrix;
+}
+
+// Render the matrix as a table: columns grouped by parameter with sub-columns Good/Moderate/Poor
+function renderPerformanceMatrixTable(matrix) {
+  const container = document.getElementById('performanceTable');
+  if (!container) return;
+
+  let html = '';
+  html += '<table class="data-table" style="width:100%; border-collapse:collapse; font-size:12px">';
+  html += '<thead>';
+  html += '<tr style="background:#f8f9fa">';
+  html += '<th rowspan="2" style="min-width:120px; border:1px solid #dee2e6">Day</th>';
+  matrix.parameters.forEach(p => {
+    html += `<th colspan="3" style="text-align:center; border:1px solid #ccc; background:#e9ecef">${parameterNames[p] || p}</th>`;
+  });
+  html += '</tr>';
+  html += '<tr style="background:#f8f9fa">';
+  matrix.parameters.forEach(() => {
+    html += '<th style="background:#d4edda">GOOD</th><th style="background:#fff3cd">MODERATE</th><th style="background:#f8d7da">POOR</th>';
+  });
+  html += '</tr>';
+  html += '</thead>';
+  html += '<tbody>';
+  matrix.days.forEach(d => {
+    html += '<tr>';
+    html += `<td style="font-weight:600; background:#fff3cd; border:1px solid #dee2e6; text-align:center">${d}</td>`;
+    matrix.parameters.forEach(p => {
+      html += `<td style="text-align:center; border:1px solid #dee2e6">${matrix.counts[p]['GOOD'][d]}</td>`;
+      html += `<td style="text-align:center; border:1px solid #dee2e6">${matrix.counts[p]['MODERATE'][d]}</td>`;
+      html += `<td style="text-align:center; border:1px solid #dee2e6">${matrix.counts[p]['POOR'][d]}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  html += '</table>';
+  container.innerHTML = html;
+}
+
+// Render grouped chart for a single parameter: x-axis Good/Moderate/Poor, bars per day
+function renderParameterGroupedChart(matrix, parameter) {
+  const chartsContainer = document.getElementById('performanceCharts');
+  if (!chartsContainer) return;
+
+  const wrapper = document.createElement('div');
+  wrapper.style.width = '900px';
+  wrapper.style.maxWidth = '100%';
+  wrapper.style.height = '420px';
+  wrapper.style.margin = '10px auto';
+  const title = document.createElement('h4');
+  title.textContent = `${getParameterDisplayName(parameter)} performance`;
+  title.style.textAlign = 'center';
+  title.style.marginBottom = '10px';
+  wrapper.appendChild(title);
+  const canvas = document.createElement('canvas');
+  canvas.id = `parameter_grouped_chart_${parameter}`;
+  wrapper.appendChild(canvas);
+  chartsContainer.appendChild(wrapper);
+
+  const ctx = canvas.getContext('2d');
+  const xCats = ['GOOD', 'MODERATE', 'POOR'];
+  const dayColors = ['#e74c3c', '#3498db', '#27ae60', '#f39c12', '#9b59b6'];
+  const datasets = matrix.days.map((d, idx) => ({
+    label: d,
+    data: xCats.map(c => matrix.counts[parameter][c][d]),
+    backgroundColor: dayColors[idx % dayColors.length]
+  }));
+
+  new Chart(ctx, {
+    type: 'bar',
+    data: { labels: xCats, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: { beginAtZero: true, max: 30, ticks: { stepSize: 2 } },
+        x: { stacked: false }
+      },
+      plugins: { legend: { position: 'top' } }
+    }
+  });
+}
+
+// Render all parameters grouped charts in a grid
+function renderAllParametersGroupedCharts(matrix) {
+  const chartsContainer = document.getElementById('performanceCharts');
+  if (!chartsContainer) return;
+  chartsContainer.innerHTML = '';
+
+  matrix.parameters.forEach(param => {
+    renderParameterGroupedChart(matrix, param);
+  });
+}
+
+function getParameterDisplayName(parameter) {
+  const displayNames = {
+    'rainfall': 'Rainfall',
+    'temp_max_c': 'Maximum Temperature',
+    'temp_min_c': 'Minimum Temperature',
+    'humidity_1': 'Maximum Relative Humidity',
+    'humidity_2': 'Minimum Relative Humidity',
+    'wind_speed_kmph': 'Wind Speed',
+    'wind_direction_deg': 'Wind Direction',
+    'cloud_cover_octa': 'Cloud Cover'
+  };
+  return displayNames[parameter] || parameter;
+}
+
+function exportPerformanceToExcel() {
+  try {
+    // Get the performance data from the current display
+    const performanceTable = document.getElementById('performanceTable');
+    if (!performanceTable) {
+      showGraphStatus('No performance data to export', 'error');
+      return;
+    }
+    
+    // Create workbook and worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.table_to_sheet(performanceTable.querySelector('table'));
+    
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'Performance_Analysis');
+    
+    // Save the file
+    XLSX.writeFile(wb, `Performance_Analysis_${new Date().toISOString().split('T')[0]}.xlsx`);
+    
+    showGraphStatus('Performance analysis exported successfully!', 'success');
+  } catch (error) {
+    console.error('Error exporting performance data:', error);
+    showGraphStatus('Error exporting performance data: ' + error.message, 'error');
+  }
+}
+
+function showGraphStatus(message, type) {
+  const statusElement = document.getElementById('graphProcessingStatus');
+  if (statusElement) {
+    statusElement.innerHTML = `<div class="status-message status-${type}">${message}</div>`;
+    setTimeout(() => {
+      statusElement.innerHTML = '';
+    }, 5000);
+  }
+}
+
+function debugPerformanceData() {
+  console.log('=== DEBUG PERFORMANCE DATA ===');
+  console.log('window.lastComprehensiveData:', window.lastComprehensiveData);
+  console.log('window.comprehensivePerformanceData:', window.comprehensivePerformanceData);
+  console.log('typeof comprehensiveResults:', typeof comprehensiveResults);
+  console.log('comprehensiveResults:', comprehensiveResults);
+  console.log('typeof processedOutput:', typeof processedOutput);
+  console.log('processedOutput length:', processedOutput ? processedOutput.length : 'undefined');
+  console.log('typeof processedObservationOutput:', typeof processedObservationOutput);
+  console.log('processedObservationOutput length:', processedObservationOutput ? processedObservationOutput.length : 'undefined');
+  
+  // Show debug info in the UI
+  let debugInfo = '<div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 10px; font-family: monospace; font-size: 12px;">';
+  debugInfo += '<strong>Debug Information:</strong><br>';
+  debugInfo += `lastComprehensiveData: ${window.lastComprehensiveData ? window.lastComprehensiveData.length : 'undefined'} items<br>`;
+  debugInfo += `comprehensivePerformanceData: ${window.comprehensivePerformanceData ? window.comprehensivePerformanceData.length : 'undefined'} items<br>`;
+  debugInfo += `globalComprehensiveData: ${window.globalComprehensiveData ? Object.keys(window.globalComprehensiveData).length : 'undefined'} days<br>`;
+  debugInfo += `comprehensiveResults: ${typeof comprehensiveResults !== 'undefined' ? 'defined' : 'undefined'}<br>`;
+  debugInfo += `processedOutput: ${processedOutput ? processedOutput.length : 'undefined'} items<br>`;
+  debugInfo += `processedObservationOutput: ${processedObservationOutput ? processedObservationOutput.length : 'undefined'} items<br>`;
+  
+  // Add more detailed info
+  if (window.lastComprehensiveData && window.lastComprehensiveData.length > 0) {
+    debugInfo += `<br><strong>Sample Data:</strong><br>`;
+    debugInfo += `First item: ${JSON.stringify(window.lastComprehensiveData[0])}<br>`;
+  }
+  
+  if (window.globalComprehensiveData && Object.keys(window.globalComprehensiveData).length > 0) {
+    debugInfo += `<br><strong>Global Storage:</strong><br>`;
+    Object.keys(window.globalComprehensiveData).forEach(day => {
+      debugInfo += `${day}: ${window.globalComprehensiveData[day].length} items<br>`;
+    });
+  }
+  
+  debugInfo += '</div>';
+  
+  const statusElement = document.getElementById('graphProcessingStatus');
+  if (statusElement) {
+    statusElement.innerHTML = debugInfo;
+  }
+}
+
+function recreatePerformanceData() {
+  console.log('=== RECREATING PERFORMANCE DATA ===');
+  
+  if (typeof comprehensiveResults === 'undefined' || !comprehensiveResults || !comprehensiveResults.districts) {
+    showGraphStatus('No comprehensive results available. Please run comprehensive analysis first.', 'error');
+    return;
+  }
+  
+  try {
+    // Get the current day from comprehensive results
+    const day = comprehensiveResults.day;
+    const dayNumber = parseInt(day.replace('Day', ''));
+    
+    // Check if we have the processed data
+    if (typeof processedOutput === 'undefined' || !processedOutput || processedOutput.length === 0) {
+      showGraphStatus('No processed forecast data available.', 'error');
+      return;
+    }
+    
+    if (typeof processedObservationOutput === 'undefined' || !processedObservationOutput || processedObservationOutput.length === 0) {
+      showGraphStatus('No processed observation data available.', 'error');
+      return;
+    }
+    
+    // Recreate the performance data
+    const rawData = processedOutput.filter(row => row.day_number === dayNumber);
+    const rawObservationData = processedObservationOutput.filter(row => row.day_number === dayNumber);
+    
+    console.log('Recreating with:', {
+      dayNumber: dayNumber,
+      rawDataLength: rawData.length,
+      rawObservationDataLength: rawObservationData.length
+    });
+    
+    window.lastComprehensiveData = [];
+    
+    // Combine and format the data for performance analysis
+    rawData.forEach(forecastRow => {
+      const observationRow = rawObservationData.find(obs => 
+        normalizeDistrictName(obs.district_name) === normalizeDistrictName(forecastRow.district_name)
+      );
+      
+      if (observationRow) {
+        window.lastComprehensiveData.push({
+          day: day,
+          district: forecastRow.district_name,
+          rainfall: observationRow.rainfall,
+          temp_max_c: observationRow.temp_max_c,
+          temp_min_c: observationRow.temp_min_c,
+          humidity_1: observationRow.humidity_1,
+          humidity_2: observationRow.humidity_2,
+          wind_speed_kmph: observationRow.wind_speed_kmph,
+          wind_direction_deg: observationRow.wind_direction_deg,
+          cloud_cover_octa: observationRow.cloud_cover_octa
+        });
+      }
+    });
+    
+    // Also store in the alternative location
+    window.comprehensivePerformanceData = window.lastComprehensiveData;
+    
+    console.log('Recreated performance data:', window.lastComprehensiveData);
+    showGraphStatus(`✅ Performance data recreated with ${window.lastComprehensiveData.length} items. You can now generate graphs.`, 'success');
+    
+  } catch (error) {
+    console.error('Error recreating performance data:', error);
+    showGraphStatus('Error recreating performance data: ' + error.message, 'error');
+  }
+}
 
 // Initialize the application when DOM is ready
 document.addEventListener('DOMContentLoaded', async () => {

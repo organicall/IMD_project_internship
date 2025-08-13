@@ -6,6 +6,7 @@
   <title>Forecast Allocator & Verification</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="full.css">
 </head>
 <body>
@@ -183,7 +184,7 @@
     </div>
 </div>
 <div class="section">
-  <h2>📊 Comprehensive Analysis - All Districts & Parameters</h2>
+  <h2> Comprehensive Analysis - All Districts & Parameters</h2>
   <div class="form-group">
       <label for="comprehensiveDay">Select Day for Comprehensive Analysis:</label>
       <select id="comprehensiveDay">
@@ -241,6 +242,38 @@
   <div id="comprehensiveTable" style="max-height: 600px; overflow: auto; border: 1px solid #ccc; border-radius: 8px;"></div>
   <div style="margin-top: 20px;">
       <button class="btn" onclick="exportComprehensiveToExcel()">📁 Export Comprehensive Analysis</button>
+  </div>
+</div>
+
+<!-- New Graph Section -->
+<div class="section" id="graphSection">
+  <h2>📊 Graphical Performance Analysis</h2>
+  <div class="form-group">
+    <label>Generate graphs for all parameters:</label>
+  </div>
+  <button class="btn" onclick="generatePerformanceGraphs()">📈 Generate Performance Graphs (All Parameters)</button>
+  <button class="btn" onclick="debugPerformanceData()" style="background-color: #6c757d; margin-left: 10px;">🐛 Debug Data</button>
+  <button class="btn" onclick="recreatePerformanceData()" style="background-color: #17a2b8; margin-left: 10px;">🔄 Recreate Data</button>
+  <div id="graphProcessingStatus"></div>
+</div>
+
+<div class="section" id="graphResultsSection" style="display: none;">
+  <h2>📊 Performance Analysis Results</h2>
+  
+  <!-- Performance Table -->
+  <div class="performance-table-container">
+    <h3>Performance Summary Table</h3>
+    <div id="performanceTable" style="max-height: 400px; overflow: auto; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 20px;"></div>
+  </div>
+  
+  <!-- Performance Charts -->
+  <div class="performance-charts-container">
+    <h3>Performance Charts</h3>
+    <div id="performanceCharts" style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;"></div>
+  </div>
+  
+  <div style="margin-top: 20px;">
+    <button class="btn" onclick="exportPerformanceToExcel()">📁 Export Performance Analysis</button>
   </div>
 </div>
   <script src="full.js"></script>
