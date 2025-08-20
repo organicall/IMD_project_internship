@@ -346,8 +346,7 @@ async function performComprehensiveAnalysis() {
       // Combine and format the data for performance analysis
       rawData.forEach(forecastRow => {
         const observationRow = rawObservationData.find(obs =>
-          normalizeDistrictName(obs.district_name) ===
-normalizeDistrictName(forecastRow.district_name)
+          normalizeDistrictName(obs.district_name) === normalizeDistrictName(forecastRow.district_name)
         );
 
         if (observationRow) {
@@ -382,16 +381,13 @@ normalizeDistrictName(forecastRow.district_name)
       // Display results
       displayComprehensiveResults(comprehensiveResults);
 
-      document.getElementById('comprehensiveResultsSection').style.display
-= 'block';
+      document.getElementById('comprehensiveResultsSection').style.display = 'block';
       document.getElementById('graphSection').style.display = 'block';
-      showComprehensiveStatus(`✅ Comprehensive analysis completed for
-${day}. You can now generate performance graphs.`, 'success');
+      showComprehensiveStatus(`✅ Comprehensive analysis completed for ${day}. You can now generate performance graphs.`, 'success');
 
     } catch (error) {
       console.error('Comprehensive analysis error:', error);
-      showComprehensiveStatus('❌ Comprehensive analysis error: ' +
-error.message, 'error');
+      showComprehensiveStatus('❌ Comprehensive analysis error: ' + error.message, 'error');
     }
   }
 
@@ -411,8 +407,7 @@ function calculateStateAverages(results, parameters) {
         totalCorrect += district.parameters[parameter].correct;
         totalUsable += district.parameters[parameter].usable;
         totalUnusable += district.parameters[parameter].unusable;
-        totalCorrectPlusUsable +=
-district.parameters[parameter].correctPlusUsable;
+        totalCorrectPlusUsable += district.parameters[parameter].correctPlusUsable;
         districtsWithData++;
       }
     });
@@ -421,8 +416,7 @@ district.parameters[parameter].correctPlusUsable;
       correct: districtsWithData > 0 ? totalCorrect / districtsWithData : 0,
       usable: districtsWithData > 0 ? totalUsable / districtsWithData : 0,
       unusable: districtsWithData > 0 ? totalUnusable / districtsWithData : 0,
-      correctPlusUsable: districtsWithData > 0 ?
-totalCorrectPlusUsable / districtsWithData : 0,
+      correctPlusUsable: districtsWithData > 0 ? totalCorrectPlusUsable / districtsWithData : 0,
       districtsWithData: districtsWithData
     };
   }
@@ -438,11 +432,10 @@ function displayComprehensiveResults(results) {
     <div style="background: #f8f9fa; padding: 20px; border-radius:
 10px; margin-bottom: 20px;">
       <h4>Analysis Summary for ${results.day}</h4>
-      <p><strong>Total Districts Analyzed:</strong>
-${results.districts.length}</p>
-      <p><strong>Parameters Analyzed:</strong>
-${results.parameters.length} (${Object.values(parameterNames).join(',')})</p>
-      <p><strong>Note:</strong> Rainfall uses YY/YN/NY/NN methodology; other parameters use threshold-based analysis</p>
+      <p><strong>Total Districts Analyzed:</strong>${results.districts.length}</p>
+      <p><strong>Parameters Analyzed:</strong>${results.parameters.length} (${Object.values(parameterNames).join(',')})</p>
+      <p><strong>Note:</strong> Rainfall uses YY/YN/NY/NN methodology;
+other parameters use threshold-based analysis</p>
     </div>
   `;
 
@@ -454,24 +447,17 @@ ${results.parameters.length} (${Object.values(parameterNames).join(',')})</p>
         <thead>
           <tr style="background: #e9ecef;">
             <th style="padding: 4px 8px; border: 1px solid #ccc;">District</th>
-            <th style="padding: 4px 8px; border: 1px solid
-#ccc;">Missing Days</th>
-            <th style="padding: 4px 8px; border: 1px solid
-#ccc;">Total Days</th>
-            <th style="padding: 4px 8px; border: 1px solid
-#ccc;">Valid Days (N)</th>
+            <th style="padding: 4px 8px; border: 1px solid #ccc;">Missing Days</th>
+            <th style="padding: 4px 8px; border: 1px solid #ccc;">Total Days</th>
+            <th style="padding: 4px 8px; border: 1px solid #ccc;">Valid Days (N)</th>
             <th style="padding: 4px 8px; border: 1px solid #ccc;">YY</th>
             <th style="padding: 4px 8px; border: 1px solid #ccc;">YN</th>
             <th style="padding: 4px 8px; border: 1px solid #ccc;">NY</th>
             <th style="padding: 4px 8px; border: 1px solid #ccc;">NN</th>
-            <th style="padding: 4px 8px; border: 1px solid
-#ccc;">Matching Cases (YY+NN)</th>
-            <th style="padding: 4px 8px; border: 1px solid
-#ccc;">Correct (%)</th>
-            <th style="padding: 4px 8px; border: 1px solid
-#ccc;">Usable (%)</th>
-            <th style="padding: 4px 8px; border: 1px solid
-#ccc;">Unusable (%)</th>
+            <th style="padding: 4px 8px; border: 1px solid #ccc;">Matching Cases (YY+NN)</th>
+            <th style="padding: 4px 8px; border: 1px solid #ccc;">Correct (%)</th>
+            <th style="padding: 4px 8px; border: 1px solid #ccc;">Usable (%)</th>
+            <th style="padding: 4px 8px; border: 1px solid #ccc;">Unusable (%)</th>
           </tr>
         </thead>
         <tbody>`;
@@ -479,26 +465,18 @@ ${results.parameters.length} (${Object.values(parameterNames).join(',')})</p>
       const rain = district.parameters['rainfall'];
       if (rain) {
         summaryHtml += `<tr>
-          <td style="padding: 4px 8px; border: 1px solid
-#ccc;">${district.district}</td>
-          <td style="padding: 4px 8px; border: 1px solid
-#ccc;">${rain.missingDays}</td>
-          <td style="padding: 4px 8px; border: 1px solid
-#ccc;">${rain.totalDays}</td>
-          <td style="padding: 4px 8px; border: 1px solid
-#ccc;">${rain.validDays}</td>
+          <td style="padding: 4px 8px; border: 1px solid #ccc;">${district.district}</td>
+          <td style="padding: 4px 8px; border: 1px solid #ccc;">${rain.missingDays}</td>
+          <td style="padding: 4px 8px; border: 1px solid #ccc;">${rain.totalDays}</td>
+          <td style="padding: 4px 8px; border: 1px solid #ccc;">${rain.validDays}</td>
           <td style="padding: 4px 8px; border: 1px solid #ccc;">${rain.YY}</td>
           <td style="padding: 4px 8px; border: 1px solid #ccc;">${rain.YN}</td>
           <td style="padding: 4px 8px; border: 1px solid #ccc;">${rain.NY}</td>
           <td style="padding: 4px 8px; border: 1px solid #ccc;">${rain.NN}</td>
-          <td style="padding: 4px 8px; border: 1px solid
-#ccc;">${rain.matchingCases}</td>
-          <td style="padding: 4px 8px; border: 1px solid
-#ccc;">${rain.correct.toFixed(1)}%</td>
-          <td style="padding: 4px 8px; border: 1px solid
-#ccc;">${rain.usable.toFixed(1)}%</td>
-          <td style="padding: 4px 8px; border: 1px solid
-#ccc;">${rain.unusable.toFixed(1)}%</td>
+          <td style="padding: 4px 8px; border: 1px solid #ccc;">${rain.matchingCases}</td>
+          <td style="padding: 4px 8px; border: 1px solid #ccc;">${rain.correct.toFixed(1)}%</td>
+          <td style="padding: 4px 8px; border: 1px solid #ccc;">${rain.usable.toFixed(1)}%</td>
+          <td style="padding: 4px 8px; border: 1px solid #ccc;">${rain.unusable.toFixed(1)}%</td>
         </tr>`;
       }
     });
@@ -513,15 +491,13 @@ ${results.parameters.length} (${Object.values(parameterNames).join(',')})</p>
     <table style="width: 100%; font-size: 11px;">
       <thead>
         <tr style="background: #f8f9fa;">
-          <th rowspan="2" style="min-width: 150px; vertical-align:
-middle;">District</th>`;
+          <th rowspan="2" style="min-width: 150px; vertical-align: middle;">District</th>`;
 
   // Add parameter headers
   results.parameters.forEach(param => {
     const colSpan = param === 'rainfall' ? '3' : '4'; // Rainfall has no unusable column
     tableHtml += `
-      <th colspan="${colSpan}" style="text-align: center; background:
-#e9ecef; border: 1px solid #ccc;">
+      <th colspan="${colSpan}" style="text-align: center; background: #e9ecef; border: 1px solid #ccc;">
         ${parameterNames[param]}
       </th>`;
   });
@@ -554,8 +530,7 @@ middle;">District</th>`;
   // Add district rows
   results.districts.forEach(district => {
     tableHtml += `<tr>
-      <td style="font-weight: bold; background:
-#f8f9fa;">${district.district}</td>`;
+      <td style="font-weight: bold; background: #f8f9fa;">${district.district}</td>`;
 
     results.parameters.forEach(param => {
       const data = district.parameters[param];
@@ -564,10 +539,8 @@ middle;">District</th>`;
                           'style="background: #f8d7da;"';
 
       if (param === 'rainfall') {
-        const totalClass = (data.correct + data.usable) >= 75 ?
-'style="background: #d4edda; font-weight: bold;"' :
-                          (data.correct + data.usable) >= 50 ?
-'style="background: #fff3cd;"' :
+        const totalClass = (data.correct + data.usable) >= 75 ? 'style="background: #d4edda; font-weight: bold;"' :
+                          (data.correct + data.usable) >= 50 ? 'style="background: #fff3cd;"' :
                           'style="background: #f8d7da;"';
 
         tableHtml += `
@@ -575,10 +548,8 @@ middle;">District</th>`;
           <td style="background: #fff3cd;">${data.usable.toFixed(1)}%</td>
           <td ${totalClass}>${(data.correct + data.usable).toFixed(1)}%</td>`;
       } else {
-        const totalClass = (data.correct + data.usable) >= 75 ?
-'style="background: #d4edda; font-weight: bold;"' :
-                          (data.correct + data.usable) >= 50 ?
-'style="background: #fff3cd;"' :
+        const totalClass = (data.correct + data.usable) >= 75 ? 'style="background: #d4edda; font-weight: bold;"' :
+                          (data.correct + data.usable) >= 50 ? 'style="background: #fff3cd;"' :
                           'style="background: #f8d7da;"';
 
         tableHtml += `
@@ -646,8 +617,7 @@ function exportComprehensiveToExcel() {
       stateRow[`${paramName}_Correct`] = avg.correct.toFixed(2);
       stateRow[`${paramName}_Usable`] = avg.usable.toFixed(2);
       stateRow[`${paramName}_Unusable`] = avg.unusable.toFixed(2);
-      stateRow[`${paramName}_CorrectPlusUsable`] =
-avg.correctPlusUsable.toFixed(2);
+      stateRow[`${paramName}_CorrectPlusUsable`] = avg.correctPlusUsable.toFixed(2);
     });
     exportData.push(stateRow);
 
@@ -668,8 +638,7 @@ avg.correctPlusUsable.toFixed(2);
     // Save file
     XLSX.writeFile(wb, filename);
 
-    showComprehensiveStatus(`✅ Comprehensive analysis exported to
-${filename}`, 'success');
+    showComprehensiveStatus(`✅ Comprehensive analysis exported to ${filename}`, 'success');
 
   } catch (error) {
     console.error('Export error:', error);
@@ -738,14 +707,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadSheetInformation();
     await refreshComprehensiveSheetsUI();
 
-    const useSpecificSheetsComparison =
-document.getElementById('useSpecificSheetsComparison');
-    const useSpecificSheetsComprehensive =
-document.getElementById('useSpecificSheetsComprehensive');
+    const useSpecificSheetsComparison = document.getElementById('useSpecificSheetsComparison');
+    const useSpecificSheetsComprehensive = document.getElementById('useSpecificSheetsComprehensive');
 
     if (useSpecificSheetsComparison) {
-        useSpecificSheetsComparison.addEventListener('change', () =>
-toggleSheetSelection('comparison'));
+        useSpecificSheetsComparison.addEventListener('change', () => toggleSheetSelection('comparison'));
     }
     if (useSpecificSheetsComprehensive) {
         useSpecificSheetsComprehensive.addEventListener('change', () => toggleSheetSelection('comprehensive'));
@@ -754,22 +720,17 @@ toggleSheetSelection('comparison'));
 
 // Setup event listeners
 function setupEventListeners() {
-  document.getElementById('fileInput').addEventListener('change',
-handleFileUpload);
-  document.getElementById('sheetNameInput').addEventListener('input',
-validateSheetName);
+  document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+  document.getElementById('sheetNameInput').addEventListener('input', validateSheetName);
 }
 function setupObservationEventListeners() {
-    document.getElementById('observationFileInput').addEventListener('change',
-handleObservationFileUpload);
-    document.getElementById('observationSheetNameInput').addEventListener('input',
-validateObservationSheetName);
+    document.getElementById('observationFileInput').addEventListener('change', handleObservationFileUpload);
+    document.getElementById('observationSheetNameInput').addEventListener('input', validateObservationSheetName);
   }
 
   function populateComparisonDropdowns() {
     // Populate district dropdown for comparison
-    const comparisonDistrictSelect =
-document.getElementById('comparisonDistrict');
+    const comparisonDistrictSelect = document.getElementById('comparisonDistrict');
     if (comparisonDistrictSelect) {
       comparisonDistrictSelect.innerHTML = '<option value="">-- Select District --</option>';
 
@@ -812,8 +773,7 @@ async function loadExistingObservationSheetNames() {
 
       if (error) throw error;
 
-      existingObservationSheetNames = [...new Set(data?.map(row =>
-row.sheet_name) || [])];
+      existingObservationSheetNames = [...new Set(data?.map(row => row.sheet_name) || [])];
     } catch (error) {
       console.error('Error loading existing observation sheet names:', error);
     }
@@ -836,8 +796,7 @@ function validateSheetName() {
   }
 
   if (existingSheetNames.includes(sheetName)) {
-    validationDiv.textContent = `Sheet name "${sheetName}" already
-exists. Please choose a different name.`;
+    validationDiv.textContent = `Sheet name "${sheetName}" already exists. Please choose a different name.`;
     validationDiv.style.display = "block";
     saveBtn.disabled = true;
     return false;
@@ -849,10 +808,8 @@ exists. Please choose a different name.`;
 }
 
 function validateObservationSheetName() {
-    const sheetName =
-document.getElementById('observationSheetNameInput').value.trim();
-    const validationDiv =
-document.getElementById('observationSheetNameValidation');
+    const sheetName = document.getElementById('observationSheetNameInput').value.trim();
+    const validationDiv = document.getElementById('observationSheetNameValidation');
     const saveBtn = document.getElementById('saveObservationToDatabaseBtn');
 
     if (!sheetName) {
@@ -863,8 +820,7 @@ document.getElementById('observationSheetNameValidation');
     }
 
     if (existingObservationSheetNames.includes(sheetName)) {
-      validationDiv.textContent = `Sheet name "${sheetName}" already
-exists. Please choose a different name.`;
+      validationDiv.textContent = `Sheet name "${sheetName}" already exists. Please choose a different name.`;
       validationDiv.style.display = "block";
       saveBtn.disabled = true;
       return false;
@@ -895,8 +851,7 @@ function handleFileUpload(e) {
       forecastWorker.onmessage = (msg) => {
         const { ok, rows, error } = msg.data || {};
         if (!ok) {
-          showStatus('❌ Error reading Excel file: ' + (error ||
-'Unknown error'), 'error');
+          showStatus('❌ Error reading Excel file: ' + (error || 'Unknown error'), 'error');
           return;
         }
 
@@ -942,15 +897,13 @@ function handleFileUpload(e) {
               return;
             }
 
-            showStatus(`✅ Successfully loaded ${forecastRows.length}
-forecast records.`, 'success');
+            showStatus(`✅ Successfully loaded ${forecastRows.length} forecast records.`, 'success');
           }
         };
         processBatch();
       };
 
-      forecastWorker.postMessage({ type: 'parse', arrayBuffer:
-evt.target.result }, [evt.target.result]);
+      forecastWorker.postMessage({ type: 'parse', arrayBuffer: evt.target.result }, [evt.target.result]);
     } catch (error) {
       console.error('Error reading Excel file:', error);
       showStatus('❌ Error reading Excel file: ' + error.message, 'error');
@@ -978,8 +931,7 @@ function handleObservationFileUpload(e) {
       observationWorker.onmessage = (msg) => {
         const { ok, rows, error } = msg.data || {};
         if (!ok) {
-          showObservationStatus('❌ Error reading Excel file: ' +
-(error || 'Unknown error'), 'error');
+          showObservationStatus('❌ Error reading Excel file: ' + (error || 'Unknown error'), 'error');
           return;
         }
 
@@ -994,8 +946,7 @@ function handleObservationFileUpload(e) {
           const slice = rows.slice(index, index + batchSize);
           for (let i = 0; i < slice.length; i++) {
             const row = slice[i];
-            const observationDate = parseDate(row.observation_date ||
-row.forecast_date);
+            const observationDate = parseDate(row.observation_date || row.forecast_date);
             if (!observationDate) continue;
             const districtRaw = (row.district_name || '').toString().trim();
             const districtNormalized = normalizeDistrictName(districtRaw);
@@ -1025,19 +976,16 @@ row.forecast_date);
               return;
             }
 
-            showObservationStatus(`✅ Successfully loaded
-${observationRows.length} observation records.`, 'success');
+            showObservationStatus(`✅ Successfully loaded ${observationRows.length} observation records.`, 'success');
           }
         };
         processBatch();
       };
 
-      observationWorker.postMessage({ type: 'parse', arrayBuffer:
-evt.target.result }, [evt.target.result]);
+      observationWorker.postMessage({ type: 'parse', arrayBuffer: evt.target.result }, [evt.target.result]);
     } catch (error) {
       console.error('Error reading observation Excel file:', error);
-      showObservationStatus('❌ Error reading Excel file: ' +
-error.message, 'error');
+      showObservationStatus('❌ Error reading Excel file: ' + error.message, 'error');
     }
   };
   reader.readAsArrayBuffer(file);
@@ -1093,8 +1041,7 @@ function parseDate(dateValue) {
           return null;
         }
 
-        parsedDate = new Date(`${year}-${month.padStart(2,
-'0')}-${day.padStart(2, '0')}`);
+        parsedDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
       }
     }
   }
@@ -1108,15 +1055,13 @@ function parseDate(dateValue) {
 
 // Parse nullable float values
 function parseNullableFloat(val) {
-  if (val === null || val === undefined || val === '' || val === 'N/A'
-|| val === 'NA' || val === '-') {
+  if (val === null || val === undefined || val === '' || val === 'N/A' || val === 'NA' || val === '-') {
     return null;
   }
 
   if (typeof val === 'string') {
     val = val.trim();
-    if (val === '' || val.toLowerCase() === 'null' ||
-val.toLowerCase() === 'na') {
+    if (val === '' || val.toLowerCase() === 'null' || val.toLowerCase() === 'na') {
       return null;
     }
   }
@@ -1162,25 +1107,21 @@ async function processForecast() {
       Processing ${forecastRows.length.toLocaleString()} records.
       This may take several minutes. The browser will remain responsive.
     `;
-    document.getElementById('loadingIndicator').insertAdjacentElement('beforebegin',
-warning);
+    document.getElementById('loadingIndicator').insertAdjacentElement('beforebegin', warning);
   }
 
-  showStatus(`🔄 Processing ${forecastRows.length.toLocaleString()}
-forecast records...`, 'info');
+  showStatus(`🔄 Processing ${forecastRows.length.toLocaleString()} forecast records...`, 'info');
   document.getElementById('loadingIndicator').classList.add('show');
 
   // Create progress indicator for large datasets
   let progressContainer = null;
   if (forecastRows.length > 5000) {
     progressContainer = createProgressIndicator('Processing forecast data...');
-    document.getElementById('loadingIndicator').insertAdjacentElement('beforebegin',
-progressContainer);
+    document.getElementById('loadingIndicator').insertAdjacentElement('beforebegin', progressContainer);
   }
 
   try {
-    const holidaysInput = document.getElementById('holidayInput').value;
-const holidays = holidaysInput
+    const holidaysInput = document.getElementById('holidayInput').value; const holidays = holidaysInput
   .split(',')
   .map(h => {
     const trimmed = h.trim();
@@ -1198,8 +1139,7 @@ const holidays = holidaysInput
     const firstDate = new Date(allDates[0]);
     const lastDate = new Date(allDates[allDates.length - 1]);
 
-    console.log('Date range:', formatDate(firstDate), 'to',
-formatDate(lastDate));
+    console.log('Date range:', formatDate(firstDate), 'to', formatDate(lastDate));
 
     // 2. Find the last Tuesday or Friday BEFORE the first date in the sheet
     let startDate = new Date(firstDate);
@@ -1211,8 +1151,7 @@ formatDate(lastDate));
     console.log('Start date for forecasting:', formatDate(startDate));
 
     // 3. Get all unique district names from the sheet
-    const uniqueDistricts = [...new Set(forecastRows.map(row =>
-normalizeDistrictName(row.district_name)))];
+    const uniqueDistricts = [...new Set(forecastRows.map(row => normalizeDistrictName(row.district_name)))];
     console.log('Districts found:', uniqueDistricts);
 
     // 4. Create a lookup map for faster data access (chunked)
@@ -1236,8 +1175,7 @@ normalizeDistrictName(row.district_name)))];
       }
     }
 
-    console.log('Created lookup with', Object.keys(dataLookup).length,
-'unique entries');
+    console.log('Created lookup with', Object.keys(dataLookup).length, 'unique entries');
 
     // 5. Generate all Tuesday/Friday dates from startDate to beyond lastDate
     const extendedLastDate = new Date(lastDate);
@@ -1251,8 +1189,7 @@ normalizeDistrictName(row.district_name)))];
       // Move to next Tuesday or Friday
       do {
         currentDate.setDate(currentDate.getDate() + 1);
-      } while (currentDate.getDay() !== 2 && currentDate.getDay() !==
-5 && currentDate <= extendedLastDate);
+      } while (currentDate.getDay() !== 2 && currentDate.getDay() !== 5 && currentDate <= extendedLastDate);
     }
 
     console.log('Generated', forecastDates.length, 'forecast dates');
@@ -1273,8 +1210,7 @@ normalizeDistrictName(row.district_name)))];
           let forecastedDate = new Date(adjustedForecastDate);
           forecastedDate.setDate(forecastedDate.getDate() + i);
           if (forecastedDate >= firstDate && forecastedDate <= lastDate) {
-            const lookupKey =
-`${district.toUpperCase().trim()}|${formatDateYMD(forecastedDate)}`;
+            const lookupKey =`${district.toUpperCase().trim()}|${formatDateYMD(forecastedDate)}`;
             const matchingRow = dataLookup[lookupKey];
             output.push({
               forecasted_date: formatDate(forecastedDate),
@@ -1289,15 +1225,12 @@ normalizeDistrictName(row.district_name)))];
               humidity_1: matchingRow ? matchingRow.humidity_1 : null,
               humidity_2: matchingRow ? matchingRow.humidity_2 : null,
               wind_speed_kmph: matchingRow ? matchingRow.wind_speed_kmph : null,
-              wind_direction_deg: matchingRow ?
-matchingRow.wind_direction_deg : null,
-              cloud_cover_octa: matchingRow ?
-matchingRow.cloud_cover_octa : null
+              wind_direction_deg: matchingRow ? matchingRow.wind_direction_deg : null,
+              cloud_cover_octa: matchingRow ? matchingRow.cloud_cover_octa : null
             });
             generatedSinceYield++;
             if (generatedSinceYield >= batchTarget) {
-              showStatus(`🔄 Processing... ${output.length} rows
-generated`, 'info');
+              showStatus(`🔄 Processing... ${output.length} rows generated`, 'info');
               await new Promise(r => setTimeout(r, 0));
               generatedSinceYield = 0;
             }
@@ -1325,8 +1258,7 @@ generated`, 'info');
     }
 
     renderTable(processedOutput);
-    showStatus(`✅ Successfully processed ${processedOutput.length}
-forecast allocations.`, 'success');
+    showStatus(`✅ Successfully processed ${processedOutput.length} forecast allocations.`, 'success');
 
   } catch (error) {
     console.error('Error processing forecast:', error);
@@ -1345,8 +1277,7 @@ async function processObservation() {
 
     try {
         // Get holidays from the OBSERVATION holiday input field
-        const holidaysInput =
-document.getElementById('observationHolidayInput').value;
+        const holidaysInput = document.getElementById('observationHolidayInput').value;
         const holidays = holidaysInput
           .split(',')
           .map(h => {
@@ -1365,8 +1296,7 @@ document.getElementById('observationHolidayInput').value;
         const firstDate = new Date(allDates[0]);
         const lastDate = new Date(allDates[allDates.length - 1]);
 
-        console.log('Observation date range:', formatDate(firstDate),
-'to', formatDate(lastDate));
+        console.log('Observation date range:', formatDate(firstDate), 'to', formatDate(lastDate));
 
         // 2. Find the last Tuesday or Friday BEFORE the first date in the sheet
         let startDate = new Date(firstDate);
@@ -1375,12 +1305,10 @@ document.getElementById('observationHolidayInput').value;
           startDate.setDate(startDate.getDate() - 1);
         }
 
-        console.log('Start date for observation forecasting:',
-formatDate(startDate));
+        console.log('Start date for observation forecasting:', formatDate(startDate));
 
         // 3. Get all unique district names from the sheet
-        const uniqueDistricts = [...new Set(observationRows.map(row =>
-normalizeDistrictName(row.district_name)))];
+        const uniqueDistricts = [...new Set(observationRows.map(row => normalizeDistrictName(row.district_name)))];
         console.log('Districts found in observation:', uniqueDistricts);
 
         // 4. Create a lookup map for faster data access (chunked)
@@ -1395,8 +1323,7 @@ normalizeDistrictName(row.district_name)))];
           }
         }
 
-        console.log('Created observation lookup with',
-Object.keys(dataLookup).length, 'unique entries');
+        console.log('Created observation lookup with', Object.keys(dataLookup).length, 'unique entries');
 
         // 5. Generate all Tuesday/Friday dates from startDate to beyond lastDate
         const extendedLastDate = new Date(lastDate);
@@ -1410,8 +1337,7 @@ Object.keys(dataLookup).length, 'unique entries');
           // Move to next Tuesday or Friday
           do {
             currentDate.setDate(currentDate.getDate() + 1);
-          } while (currentDate.getDay() !== 2 && currentDate.getDay()
-!== 5 && currentDate <= extendedLastDate);
+          } while (currentDate.getDay() !== 2 && currentDate.getDay() !== 5 && currentDate <= extendedLastDate);
         }
 
         console.log('Generated', forecastDates.length, 'observation forecast dates');
@@ -1432,8 +1358,7 @@ Object.keys(dataLookup).length, 'unique entries');
               let forecastedDate = new Date(adjustedForecastDate);
               forecastedDate.setDate(forecastedDate.getDate() + i);
               if (forecastedDate >= firstDate && forecastedDate <= lastDate) {
-                const lookupKey =
-`${district.toUpperCase().trim()}|${formatDateYMD(forecastedDate)}`;
+                const lookupKey = `${district.toUpperCase().trim()}|${formatDateYMD(forecastedDate)}`;
                 const matchingRow = dataLookup[lookupKey];
                 output.push({
                   forecasted_date: formatDate(forecastedDate),
@@ -1453,8 +1378,7 @@ Object.keys(dataLookup).length, 'unique entries');
                 });
                 generatedSinceYield++;
                 if (generatedSinceYield >= batchTarget) {
-                  showObservationStatus(`🔄 Processing...
-${output.length} rows generated`, 'info');
+                  showObservationStatus(`🔄 Processing... ${output.length} rows generated`, 'info');
                   await new Promise(r => setTimeout(r, 0));
                   generatedSinceYield = 0;
                 }
@@ -1467,19 +1391,15 @@ ${output.length} rows generated`, 'info');
           (a, b) => new Date(a.forecasted_date) - new Date(b.forecasted_date)
         );
 
-        console.log('Generated', processedObservationOutput.length,
-'observation forecast allocations');
+        console.log('Generated', processedObservationOutput.length, 'observation forecast allocations');
 
         // Enable save button if sheet name is valid
         if (validateObservationSheetName()) {
-          document.getElementById('saveObservationToDatabaseBtn').disabled
-= false;
+          document.getElementById('saveObservationToDatabaseBtn').disabled = false;
         }
 
         renderObservationTable(processedObservationOutput);
-        showObservationStatus(`✅ Successfully processed
-${processedObservationOutput.length} observation forecast
-allocations.`, 'success');
+        showObservationStatus(`✅ Successfully processed ${processedObservationOutput.length} observation forecast allocations.`, 'success');
 
       } catch (error) {
         console.error('Error processing observation:', error);
@@ -1518,8 +1438,7 @@ row.day === dayName);
       return;
     }
 
-    const sheetName =
-document.getElementById('observationSheetNameInput').value.trim();
+    const sheetName = document.getElementById('observationSheetNameInput').value.trim();
 
     try {
       showObservationStatus('💾 Saving observation data to database...', 'info');
@@ -1548,9 +1467,7 @@ document.getElementById('observationSheetNameInput').value.trim();
         throw error;
       }
 
-      showObservationStatus(`✅ Successfully saved ${dbData.length}
-observation records to database with sheet name "${sheetName}".`,
-'success');
+      showObservationStatus(`✅ Successfully saved ${dbData.length} observation records to database with sheet name "${sheetName}".`, 'success');
 
       // Update existing sheet names and disable save button
       existingObservationSheetNames.push(sheetName);
@@ -1560,8 +1477,7 @@ observation records to database with sheet name "${sheetName}".`,
 
     } catch (error) {
       console.error('Database save error for observation:', error);
-      showObservationStatus('❌ Error saving observation to database: '
-+ error.message, 'error');
+      showObservationStatus('❌ Error saving observation to database: ' + error.message, 'error');
     }
   }
 
@@ -1608,24 +1524,17 @@ forecastResultsSection);
 
   let html = `
     <h2>📊 Processed Forecast Data</h2>
-    <div style="display:flex; justify-content: space-between;
-align-items:center; margin-bottom: 10px; gap: 12px; flex-wrap: wrap;">
-      <div><strong>Total Records: ${total}</strong> · Showing
-${pageData.length} rows</div>
+    <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 10px; gap: 12px; flex-wrap: wrap;">
+      <div><strong>Total Records: ${total}</strong> · Showing ${pageData.length} rows</div>
       <div>
-        <button class="btn" onclick="changeForecastPage('first')"
-${page <= 1 ? 'disabled' : ''}>⏮ First</button>
-        <button class="btn" onclick="changeForecastPage('prev')"
-${page <= 1 ? 'disabled' : ''}>◀ Prev</button>
+        <button class="btn" onclick="changeForecastPage('first')" ${page <= 1 ? 'disabled' : ''}>⏮ First</button>
+        <button class="btn" onclick="changeForecastPage('prev')" ${page <= 1 ? 'disabled' : ''}>◀ Prev</button>
         <span style="margin: 0 8px;">Page ${page} / ${totalPages}</span>
-        <button class="btn" onclick="changeForecastPage('next')"
-${page >= totalPages ? 'disabled' : ''}>Next ▶</button>
-        <button class="btn" onclick="changeForecastPage('last')"
-${page >= totalPages ? 'disabled' : ''}>Last ⏭</button>
+        <button class="btn" onclick="changeForecastPage('next')" ${page >= totalPages ? 'disabled' : ''}>Next ▶</button>
+        <button class="btn" onclick="changeForecastPage('last')" ${page >= totalPages ? 'disabled' : ''}>Last ⏭</button>
       </div>
     </div>
-    <div style="max-height: 500px; overflow: auto; border: 1px solid
-#ccc; border-radius: 8px;">
+    <div style="max-height: 500px; overflow: auto; border: 1px solid #ccc; border-radius: 8px;">
       <table>
         <thead>
           <tr>
@@ -1648,9 +1557,7 @@ ${page >= totalPages ? 'disabled' : ''}>Last ⏭</button>
   for (let row of pageData) {
     html += `<tr>
       <td>${row.forecasted_date}</td>
-      <td><span style="background: linear-gradient(45deg, #667eea,
-#764ba2); color: white; padding: 4px 8px; border-radius: 15px;
-font-size: 12px;">${row.day}</span></td>
+      <td><span style="background: linear-gradient(45deg, #667eea, #764ba2); color: white; padding: 4px 8px; border-radius: 15px; font-size: 12px;">${row.day}</span></td>
       <td>${row.forecast_taken_on}</td>
       <td><strong>${row.district_name}</strong></td>
       <td>${formatValue(row.rainfall)}</td>
@@ -1670,25 +1577,17 @@ font-size: 12px;">${row.day}</span></td>
       <h4 style="margin-bottom: 10px;">📁 Export Forecast Data</h4>
       <div style="margin-bottom: 15px;">
         <h5 style="margin-bottom: 10px;">Export Current View:</h5>
-        <button class="btn" onclick="exportCurrentForecastView()">📁
-Export Current View</button>
-        <p style="font-size: 12px; color: #666; margin-top:
-5px;">Exports whatever is currently displayed in the table above</p>
+        <button class="btn" onclick="exportCurrentForecastView()">📁 Export Current View</button>
+        <p style="font-size: 12px; color: #666; margin-top: 5px;">Exports whatever is currently displayed in the table above</p>
       </div>
       <div>
         <h5 style="margin-bottom: 10px;">Export Specific Days:</h5>
-        <button class="btn" onclick="exportForecastToExcel('All')">📁
-Export All Days</button>
-        <button class="btn" onclick="exportForecastToExcel('Day1')">📁
-Export Day 1</button>
-        <button class="btn" onclick="exportForecastToExcel('Day2')">📁
-Export Day 2</button>
-        <button class="btn" onclick="exportForecastToExcel('Day3')">📁
-Export Day 3</button>
-        <button class="btn" onclick="exportForecastToExcel('Day4')">📁
-Export Day 4</button>
-        <button class="btn" onclick="exportForecastToExcel('Day5')">📁
-Export Day 5</button>
+        <button class="btn" onclick="exportForecastToExcel('All')">📁 Export All Days</button>
+        <button class="btn" onclick="exportForecastToExcel('Day1')">📁 Export Day 1</button>
+        <button class="btn" onclick="exportForecastToExcel('Day2')">📁 Export Day 2</button>
+        <button class="btn" onclick="exportForecastToExcel('Day3')">📁 Export Day 3</button>
+        <button class="btn" onclick="exportForecastToExcel('Day4')">📁 Export Day 4</button>
+        <button class="btn" onclick="exportForecastToExcel('Day5')">📁 Export Day 5</button>
       </div>
     </div>`;
 
@@ -1731,30 +1630,19 @@ document.getElementById('observationResultsSection');
     observationResultsSection.innerHTML = `
       <h2>📈 Processed Observation Data</h2>
       <div class="filter-buttons" id="observationFilterButtons">
-        <button class="btn"
-onclick="filterObservationByDay('All')">Show All</button>
-        <button class="btn"
-onclick="filterObservationByDay('Day1')">Day 1</button>
-        <button class="btn"
-onclick="filterObservationByDay('Day2')">Day 2</button>
-        <button class="btn"
-onclick="filterObservationByDay('Day3')">Day 3</button>
-        <button class="btn"
-onclick="filterObservationByDay('Day4')">Day 4</button>
-        <button class="btn"
-onclick="filterObservationByDay('Day5')">Day 5</button>
+        <button class="btn" onclick="filterObservationByDay('All')">Show All</button>
+        <button class="btn" onclick="filterObservationByDay('Day1')">Day 1</button>
+        <button class="btn" onclick="filterObservationByDay('Day2')">Day 2</button>
+        <button class="btn" onclick="filterObservationByDay('Day3')">Day 3</button>
+        <button class="btn" onclick="filterObservationByDay('Day4')">Day 4</button>
+        <button class="btn" onclick="filterObservationByDay('Day5')">Day 5</button>
       </div>
       <div id="observationResult"></div>
       <div style="margin-top: 20px;" id="observationExportButtons">
-        <button class="btn"
-onclick="exportCurrentObservationView()">📁 Export Current
-View</button>
-        <button class="btn"
-onclick="exportObservationToExcel('All')">📁 Export All</button>
-        <button class="btn"
-onclick="exportObservationToExcel('Day1')">📁 Export Day 1</button>
-        <button class="btn"
-onclick="exportObservationToExcel('Day2')">📁 Export Day 2</button>
+        <button class="btn" onclick="exportCurrentObservationView()">📁 Export Current View</button>
+        <button class="btn" onclick="exportObservationToExcel('All')">📁 Export All</button>
+        <button class="btn" onclick="exportObservationToExcel('Day1')">📁 Export Day 1</button>
+        <button class="btn" onclick="exportObservationToExcel('Day2')">📁 Export Day 2</button>
         <button class="btn"
 onclick="exportObservationToExcel('Day3')">📁 Export Day 3</button>
         <button class="btn"
@@ -4104,7 +3992,7 @@ function updateForecastSheetDisplay() {
 
   let html = '';
   forecastSheets.forEach(sheet => {
-    const dateRangeText = sheet.dateRange ?
+const dateRangeText = sheet.dateRange ?
       `${formatDate(new Date(sheet.dateRange.start))} to
 ${formatDate(new Date(sheet.dateRange.end))}` :
       'No dates';
@@ -4262,8 +4150,7 @@ async function deleteSheet(type, sheetName) {
     // Remove from local arrays
     if (type === 'forecast') {
       forecastSheets = forecastSheets.filter(s => s.name !== sheetName);
-      existingSheetNames = existingSheetNames.filter(name => name !==
-sheetName);
+      existingSheetNames = existingSheetNames.filter(name => name !== sheetName);
       updateForecastSheetDisplay();
     } else {
       observationSheets = observationSheets.filter(s => s.name !== sheetName);
@@ -4877,6 +4764,498 @@ sheet: <strong>${sheetName}</strong>${dayFilter==='all'?'':' • Day '+dayFilter
   }
 }
 
+// Export the rendered All Days Comprehensive Analysis Results table to Excel
+function exportAllDaysComprehensiveToExcel() {
+  try {
+    const tableContainer = document.getElementById('allDaysComprehensiveTable');
+    if (!tableContainer || !tableContainer.querySelector('table')) {
+      alert('No All Days Comprehensive Results to export. Please view stored data first.');
+      return;
+    }
+    const table = tableContainer.querySelector('table');
+    exportTableAsExcelHtml(table, 'AllDays_Comprehensive_Results.xls');
+  } catch (e) {
+    alert('Export failed: ' + e.message);
+    console.error('exportAllDaysComprehensiveToExcel error:', e);
+  }
+}
+
+// Generic: export an HTML table as Excel (preserves inline colors/styles)
+function exportTableAsExcelHtml(tableElement, filename) {
+  // Clone table and inline critical computed styles so Excel preserves colors
+  const cloned = tableElement.cloneNode(true);
+  const origCells = tableElement.querySelectorAll('th,td');
+  const cloneCells = cloned.querySelectorAll('th,td');
+  for (let i = 0; i < cloneCells.length; i++) {
+    const src = origCells[i];
+    const dst = cloneCells[i];
+    if (!src || !dst) continue;
+    const cs = window.getComputedStyle(src);
+    const styleParts = [];
+    // Preserve background and text color
+    const bg = cs.backgroundColor;
+    if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent')
+styleParts.push(`background-color:${bg}`);
+    const fg = cs.color;
+    if (fg) styleParts.push(`color:${fg}`);
+    // Preserve font-weight and alignment
+    if (cs.fontWeight) styleParts.push(`font-weight:${cs.fontWeight}`);
+    if (cs.textAlign) styleParts.push(`text-align:${cs.textAlign}`);
+    if (cs.verticalAlign) styleParts.push(`vertical-align:${cs.verticalAlign}`);
+    // Basic borders to improve readability in Excel
+    styleParts.push('border:1px solid #ccc');
+    styleParts.push('mso-number-format:\@');
+    const existing = dst.getAttribute('style') || '';
+    dst.setAttribute('style', existing + (existing &&
+styleParts.length ? ';' : '') + styleParts.join(';'));
+  }
+
+  const excelHtml = `<!DOCTYPE html>
+  <html xmlns:o="urn:schemas-microsoft-com:office:office"
+xmlns:x="urn:schemas-microsoft-com:office:excel"
+xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+      <meta http-equiv="content-type"
+content="application/vnd.ms-excel; charset=UTF-8"/>
+      <!--[if gte mso 9]><xml>
+      <x:ExcelWorkbook>
+        <x:ExcelWorksheets>
+          <x:ExcelWorksheet>
+            <x:Name>Sheet1</x:Name>
+            <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+          </x:ExcelWorksheet>
+        </x:ExcelWorksheets>
+      </x:ExcelWorkbook>
+      </xml><![endif]-->
+      <style>table,th,td{border-collapse:collapse;border:1px solid
+#ccc;}</style>
+    </head>
+    <body>${cloned.outerHTML}</body>
+  </html>`;
+
+  const blob = new Blob([excelHtml], { type:
+'application/vnd.ms-excel;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// Generate Good/Moderate/Poor counts by day and parameter from All Days table, then build graphs
+// function generateColorCountsAndGraphsFromAllDays() {
+//   try {
+//     const section =
+// document.getElementById('allDaysComprehensiveResultsSection');
+//     const tableContainer = document.getElementById('allDaysComprehensiveTable');
+//     if (!section || !tableContainer || !tableContainer.querySelector('table')) {
+//       alert('Please view the All Days Comprehensive results first.');
+//       return;
+//     }
+
+//     // Parse table to get day, district and parameter blocks
+//     const table = tableContainer.querySelector('table');
+//     const headerRows = table.querySelectorAll('thead tr');
+//     if (headerRows.length < 2) {
+//       alert('Unexpected table format.');
+//       return;
+//     }
+
+//     // Build parameter column ranges (each parameter has 4 sub-columns: Correct, Usable, Unusable, C+U)
+//     const paramNames = [];
+//     const paramColRanges = [];
+//     const topHeaderCells = Array.from(headerRows[0].querySelectorAll('th'));
+//     // Skip first two headers (Day, District)
+//     let colIndex = 2;
+//     for (let i = 2; i < topHeaderCells.length; i++) {
+//       const th = topHeaderCells[i];
+//       const span = parseInt(th.getAttribute('colspan') || '1', 10);
+//       const label = th.textContent.trim();
+//       paramNames.push(label);
+//       paramColRanges.push({ start: colIndex, end: colIndex + span - 1 });
+//       colIndex += span;
+//     }
+
+//     // Initialize counts: days 1..5 × parameters × categories
+//     const days = [1,2,3,4,5];
+//     const categories = ['Good', 'Moderate', 'Poor'];
+//     const counts = {};
+//     days.forEach(d => {
+//       counts[d] = {};
+//       paramNames.forEach(p => { counts[d][p] = { Good: 0, Moderate: 0,
+// Poor: 0 }; });
+//     });
+
+//     // We classify by the C+U cell background color (same thresholds as UI coloring)
+//     const bodyRows = Array.from(table.querySelectorAll('tbody tr'));
+//     bodyRows.forEach(tr => {
+//       const tds = Array.from(tr.querySelectorAll('td'));
+//       if (tds.length < 2) return;
+//       const dayText = tds[0].textContent.trim();
+//       const dayMatch = dayText.match(/Day\s*(\d+)/i);
+//       if (!dayMatch) return;
+//       const dayNum = parseInt(dayMatch[1], 10);
+//       if (!days.includes(dayNum)) return;
+
+//       // For each parameter, look at the C+U column cell style
+//       paramColRanges.forEach((range, idx) => {
+//         const cuIndex = range.end; // C+U is last of the 4 subcolumns
+//         const cell = tds[cuIndex];
+//         if (!cell) return;
+//         const bg = window.getComputedStyle(cell).backgroundColor;
+//         let cat = null;
+//         if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+//           // Match colors used in UI: green (#d4edda), yellowc(#fff3cd), red (#f8d7da)
+//           if (bg.includes('212, 237, 218')) cat = 'Good';
+//           else if (bg.includes('255, 243, 205')) cat = 'Moderate';
+//           else if (bg.includes('248, 215, 218')) cat = 'Poor';
+//         }
+//         if (cat) counts[dayNum][paramNames[idx]][cat] += 1;
+//       });
+//     });
+
+//     // Build counts table
+//     const countsSection = document.getElementById('colorCountsSection');
+//     const countsDiv = document.getElementById('colorCountsTable');
+//     countsSection.style.display = 'block';
+//     let html = '<table style="width:100%; font-size:12px;">';
+//     html += '<thead><tr><th>Parameter / Category</th>' + days.map(d =>
+// `<th>Day ${d}</th>`).join('') + '</tr></thead><tbody>';
+//     paramNames.forEach(p => {
+//       categories.forEach(cat => {
+//         html += `<tr><td>${p} — ${cat}</td>` + days.map(d =>
+// `<td>${counts[d][p][cat]}</td>`).join('') + '</tr>';
+//       });
+//     });
+//     html += '</tbody></table>';
+//     countsDiv.innerHTML = html;
+
+//     // Build bar charts
+//     const chartsSection = document.getElementById('colorChartsSection');
+//     const chartsContainer = document.getElementById('colorChartsContainer');
+//     chartsSection.style.display = 'block';
+//     chartsContainer.innerHTML = '';
+
+//     const dayColors = 
+//     paramNames.forEach((p, idx) => {
+//       ['Good','Moderate','Poor'].forEach(cat => {
+//         const canvas = document.createElement('canvas');
+//         canvas.width = 400; canvas.height = 240;
+//         chartsContainer.appendChild(canvas);
+//         const ctx = canvas.getContext('2d');
+//         const data = days.map(d => counts[d][p][cat]);
+//         const color = cat === 'Good' ? '#28a745' : (cat === 'Moderate'
+// ? '#ffc107' : '#dc3545');
+//         new Chart(ctx, {
+//           type: 'bar',
+//           data: {
+//             labels: days.map(d => `Day ${d}`),
+//             datasets: [{ label: `${p} — ${cat}`, data, backgroundColor: color }]
+//           },
+//           options: {
+//             responsive: false,
+//             scales: {
+//               y: { beginAtZero: true, suggestedMax: 30, ticks: { stepSize: 5 } }
+//             }
+//           }
+//         });
+//       });
+//     });
+//   } catch (e) {
+//     alert('Failed to generate color counts/graphs: ' + e.message);
+//     console.error(e);
+//   }
+// }
+
+// // Export all generated color charts as PNGs in a single ZIP-like download (simplified sequential)
+// async function exportAllColorCharts() {
+//   try {
+//     const container = document.getElementById('colorChartsContainer');
+//     if (!container) return alert('No charts to export.');
+//     const canvases = Array.from(container.querySelectorAll('canvas'));
+//     if (canvases.length === 0) return alert('No charts to export.');
+
+//     // Download each canvas as a PNG
+//     for (let i = 0; i < canvases.length; i++) {
+//       const canvas = canvases[i];
+//       const link = document.createElement('a');
+//       link.href = canvas.toDataURL('image/png');
+//       link.download = `chart_${i+1}.png`;
+//       document.body.appendChild(link);
+//       link.click();
+//       document.body.removeChild(link);
+//       await new Promise(r => setTimeout(r, 200));
+//     }
+//   } catch (e) {
+//     alert('Failed to export charts: ' + e.message);
+//   }
+// }
+
+// // Export all charts embedded into an Excel workbook
+// function exportAllColorChartsToExcel() {
+//   try {
+//     const container = document.getElementById('colorChartsContainer');
+//     if (!container) return alert('No charts to export.');
+//     const canvases = Array.from(container.querySelectorAll('canvas'));
+//     if (canvases.length === 0) return alert('No charts to export.');
+
+//     // Use ExcelJS to embed images into worksheets
+//     const wb = new ExcelJS.Workbook();
+//     wb.creator = 'CWC Vizag';
+//     wb.created = new Date();
+
+//     const index = wb.addWorksheet('Index');
+//     index.columns = [{ header: 'Chart Sheet', key: 'name', width: 30 }];
+
+//     canvases.forEach((c, idx) => {
+//       const wsName = `Chart_${idx+1}`;
+//       const ws = wb.addWorksheet(wsName);
+//       // Convert canvas to PNG buffer
+//       const dataUrl = c.toDataURL('image/png');
+//       const base64 = dataUrl.substring(dataUrl.indexOf(',') + 1);
+//       const imageId = wb.addImage({ base64: base64, extension: 'png' });
+//       // Add image to sheet and size it
+//       ws.addImage(imageId, {
+//         tl: { col: 0, row: 0 },
+//         ext: { width: Math.max(600, c.width), height: Math.max(350, c.height) }
+//       });
+//       index.addRow({ name: wsName });
+//     });
+
+//     wb.xlsx.writeBuffer().then(buffer => {
+//       const blob = new Blob([buffer], { type:
+// 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+// });
+//       const url = URL.createObjectURL(blob);
+//       const a = document.createElement('a');
+//       a.href = url;
+//       a.download = 'Color_Charts.xlsx';
+//       document.body.appendChild(a);
+//       a.click();
+//       document.body.removeChild(a);
+//       URL.revokeObjectURL(url);
+//     });
+//   } catch (e) {
+//     alert('Failed to export charts to Excel: ' + e.message);
+//   }
+// }
+function generateColorCountsAndGraphsFromAllDays() {
+  try {
+    const section =
+document.getElementById('allDaysComprehensiveResultsSection');
+    const tableContainer = document.getElementById('allDaysComprehensiveTable');
+    if (!section || !tableContainer || !tableContainer.querySelector('table')) {
+      alert('Please view the All Days Comprehensive results first.');
+      return;
+    }
+
+    // Parse table to get day, district and parameter blocks
+    const table = tableContainer.querySelector('table');
+    const headerRows = table.querySelectorAll('thead tr');
+    if (headerRows.length < 2) {
+      alert('Unexpected table format.');
+      return;
+    }
+
+    // Build parameter column ranges (each parameter has 4 sub-columns: Correct, Usable, Unusable, C+U)
+    const paramNames = [];
+    const paramColRanges = [];
+    const topHeaderCells = Array.from(headerRows[0].querySelectorAll('th'));
+    // Skip first two headers (Day, District)
+    let colIndex = 2;
+    for (let i = 2; i < topHeaderCells.length; i++) {
+      const th = topHeaderCells[i];
+      const span = parseInt(th.getAttribute('colspan') || '1', 10);
+      const label = th.textContent.trim();
+      paramNames.push(label);
+      paramColRanges.push({ start: colIndex, end: colIndex + span - 1 });
+      colIndex += span;
+    }
+
+    // Initialize counts: days 1..5 × parameters × categories
+    const days = [1,2,3,4,5];
+    const categories = ['Good', 'Moderate', 'Poor'];
+    const counts = {};
+    days.forEach(d => {
+      counts[d] = {};
+      paramNames.forEach(p => { counts[d][p] = { Good: 0, Moderate: 0,
+Poor: 0 }; });
+    });
+
+    // We classify by the C+U cell background color (same thresholds as UI coloring)
+    const bodyRows = Array.from(table.querySelectorAll('tbody tr'));
+    bodyRows.forEach(tr => {
+      const tds = Array.from(tr.querySelectorAll('td'));
+      if (tds.length < 2) return;
+      const dayText = tds[0].textContent.trim();
+      const dayMatch = dayText.match(/Day\s*(\d+)/i);
+      if (!dayMatch) return;
+      const dayNum = parseInt(dayMatch[1], 10);
+      if (!days.includes(dayNum)) return;
+
+      // For each parameter, look at the C+U column cell style
+      paramColRanges.forEach((range, idx) => {
+        const cuIndex = range.end; // C+U is last of the 4 subcolumns
+        const cell = tds[cuIndex];
+        if (!cell) return;
+        const bg = window.getComputedStyle(cell).backgroundColor;
+        let cat = null;
+        if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+          // Match colors used in UI: green (#d4edda), yellow (#fff3cd), red (#f8d7da)
+          if (bg.includes('212, 237, 218')) cat = 'Good';
+          else if (bg.includes('255, 243, 205')) cat = 'Moderate';
+          else if (bg.includes('248, 215, 218')) cat = 'Poor';
+        }
+        if (cat) counts[dayNum][paramNames[idx]][cat] += 1;
+      });
+    });
+
+    // Build counts table
+    const countsSection = document.getElementById('colorCountsSection');
+    const countsDiv = document.getElementById('colorCountsTable');
+    countsSection.style.display = 'block';
+    let html = '<table style="width:100%; font-size:12px;">';
+    html += '<thead><tr><th>Parameter / Category</th>' + days.map(d =>
+`<th>Day ${d}</th>`).join('') + '</tr></thead><tbody>';
+    paramNames.forEach(p => {
+      categories.forEach(cat => {
+        html += `<tr><td>${p} — ${cat}</td>` + days.map(d =>
+`<td>${counts[d][p][cat]}</td>`).join('') + '</tr>';
+      });
+    });
+    html += '</tbody></table>';
+    countsDiv.innerHTML = html;
+
+    // Build bar charts
+    const chartsSection = document.getElementById('colorChartsSection');
+    const chartsContainer = document.getElementById('colorChartsContainer');
+    chartsSection.style.display = 'block';
+    chartsContainer.innerHTML = '';
+
+    // Define day colors (avoiding green, red, yellow)
+    const dayColors = ['#3498db', '#9b59b6', '#e67e22', '#1abc9c', '#34495e'];
+
+    paramNames.forEach((p, idx) => {
+      ['Good','Moderate','Poor'].forEach(cat => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 400; canvas.height = 240;
+        chartsContainer.appendChild(canvas);
+        const ctx = canvas.getContext('2d');
+        const data = days.map(d => counts[d][p][cat]);
+
+        // Create datasets where each day has its own color
+        const datasets = days.map((d, dayIdx) => ({
+          label: `Day ${d}`,
+          data: [counts[d][p][cat]],
+          backgroundColor: dayColors[dayIdx % dayColors.length]
+        }));
+
+        new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: [cat],
+            datasets: datasets
+          },
+          options: {
+            responsive: false,
+            scales: {
+              y: { beginAtZero: true, suggestedMax: 30, ticks: { stepSize: 5 } }
+            },
+            plugins: {
+              legend: {
+                position: 'top',
+                labels: {
+                  usePointStyle: true
+                }
+              }
+            }
+          }
+        });
+      });
+    });
+  } catch (e) {
+    alert('Failed to generate color counts/graphs: ' + e.message);
+    console.error(e);
+  }
+}
+
+// Export all generated color charts as PNGs in a single ZIP-like download (simplified sequential)
+async function exportAllColorCharts() {
+  try {
+    const container = document.getElementById('colorChartsContainer');
+    if (!container) return alert('No charts to export.');
+    const canvases = Array.from(container.querySelectorAll('canvas'));
+    if (canvases.length === 0) return alert('No charts to export.');
+
+    // Download each canvas as a PNG
+    for (let i = 0; i < canvases.length; i++) {
+      const canvas = canvases[i];
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL('image/png');
+      link.download = `chart_${i+1}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      await new Promise(r => setTimeout(r, 200));
+    }
+  } catch (e) {
+    alert('Failed to export charts: ' + e.message);
+  }
+}
+
+// Export all charts embedded into an Excel workbook
+function exportAllColorChartsToExcel() {
+  try {
+    const container = document.getElementById('colorChartsContainer');
+    if (!container) return alert('No charts to export.');
+    const canvases = Array.from(container.querySelectorAll('canvas'));
+    if (canvases.length === 0) return alert('No charts to export.');
+
+    // Use ExcelJS to embed images into worksheets
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'CWC Vizag';
+    wb.created = new Date();
+
+    const index = wb.addWorksheet('Index');
+    index.columns = [{ header: 'Chart Sheet', key: 'name', width: 30 }];
+
+    canvases.forEach((c, idx) => {
+      const wsName = `Chart_${idx+1}`;
+      const ws = wb.addWorksheet(wsName);
+      // Convert canvas to PNG buffer
+      const dataUrl = c.toDataURL('image/png');
+      const base64 = dataUrl.substring(dataUrl.indexOf(',') + 1);
+      const imageId = wb.addImage({ base64: base64, extension: 'png' });
+      // Add image to sheet and size it
+      ws.addImage(imageId, {
+        tl: { col: 0, row: 0 },
+        ext: { width: Math.max(600, c.width), height: Math.max(350, c.height) }
+      });
+      index.addRow({ name: wsName });
+    });
+
+    wb.xlsx.writeBuffer().then(buffer => {
+      const blob = new Blob([buffer], { type:
+'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'Color_Charts.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+  } catch (e) {
+    alert('Failed to export charts to Excel: ' + e.message);
+  }
+}
+
+
 function populateForecastCheckboxes(type, forecastCheckboxDiv) {
   forecastCheckboxDiv.innerHTML = '';
 
@@ -5130,8 +5509,7 @@ sheetName) => {
         const sheet = forecastSheets.find(s => s.name === sheetName);
         return total + (sheet ? sheet.records : 0);
       }, 0);
-      summary += `Forecast: ${selectedForecastSheets.length} sheet(s)
-- ${forecastRecords} records`;
+      summary += `Forecast: ${selectedForecastSheets.length} sheet(s) - ${forecastRecords} records`;
     }
 
     // Calculate total records for observation sheets
@@ -5234,8 +5612,7 @@ ${maxVisibleRows.toLocaleString()} rows)` : ''}
 
   headers.forEach(header => {
     const th = document.createElement('th');
-    th.textContent = header.replace(/_/g, ' ').replace(/\b\w/g, l =>
-l.toUpperCase());
+    th.textContent = header.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     th.style.cssText = 'padding: 8px; border: 1px solid #ddd; background: #f8f9fa; font-weight: 600;';
     headerRow.appendChild(th);
   });
@@ -5317,7 +5694,8 @@ function createPaginationControls(totalRecords, pageSize, onPageChange) {
   prevBtn.textContent = '← Previous';
   prevBtn.className = 'btn btn-sm';
   prevBtn.onclick = () => {
-    const currentPage = Math.max(0, parseInt(info.dataset.currentPage || 1) - 2);
+    const currentPage = Math.max(0, parseInt(info.dataset.currentPage
+|| 1) - 2);
     onPageChange(currentPage);
     updatePaginationInfo(info, currentPage + 1, totalPages);
   };

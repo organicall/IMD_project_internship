@@ -6,6 +6,7 @@
   <title>Forecast Allocator & Verification</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="full.css">
 </head>
@@ -331,6 +332,27 @@ overflow: auto; border: 1px solid #ccc; border-radius: 8px;"></div>
         <button class="btn"
 onclick="exportAllDaysComprehensiveToExcel()">📁 Export All Days
 Analysis</button>
+    </div>
+    <div style="margin-top: 16px;">
+      <button class="btn" style="background-color:#ffc107;
+color:black;" onclick="generateColorCountsAndGraphsFromAllDays()">📈
+Generate Color Counts & Graphs</button>
+    </div>
+    <div id="colorCountsSection" style="display:none; margin-top: 16px;">
+      <h3>Day-wise Counts by Performance Category</h3>
+      <div id="colorCountsTable" style="max-height: 400px; overflow:
+auto; border: 1px solid #ccc; border-radius: 8px;"></div>
+    </div>
+    <div id="colorChartsSection" style="display:none; margin-top: 16px;">
+      <h3>Bar Charts by Parameter</h3>
+      <div id="colorChartsContainer" style="display:flex;
+flex-wrap:wrap; gap:16px;"></div>
+      <div style="margin-top: 12px; display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn" onclick="exportAllColorCharts()">📁 Export
+All Charts (PNG)</button>
+        <button class="btn" onclick="exportAllColorChartsToExcel()">📁
+Export Charts to Excel</button>
+      </div>
     </div>
   </div>
 
