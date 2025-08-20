@@ -11,7 +11,8 @@
 </head>
 <body>
   <header class="header">
-    <h1 style="padding-bottom: 10px;" > Forecast Department - CWC Visakhapatnam </h1>
+    <h1 style="padding-bottom: 10px;" > Forecast Department - CWC
+Visakhapatnam </h1>
     <nav>
       <a href="full.html"> Analysis </a>
       <a href="about.html"> Help & Guide </a>
@@ -21,25 +22,33 @@
     <div class="section">
       <h2>Upload Forecast Data</h2>
       <div class="form-group">
-        <label for="fileInput">Select Forecast Excel File (in .xlsv format):</label>
+        <label for="fileInput">Select Forecast Excel File (in .xlsv
+format):</label>
         <input type="file" id="fileInput" accept=".xlsx,.xls">
       </div>
       <div class="form-group">
-        <label for="holidayInput">Enter Holidays (MM/DD/YYYY format, comma-separated):</label>
-        <textarea id="holidayInput" placeholder="e.g. 07/23/2025, 07/26/2025, 08/15/2025" rows="3"></textarea>
+        <label for="holidayInput">Enter Holidays (MM/DD/YYYY format,
+comma-separated):</label>
+        <textarea id="holidayInput" placeholder="e.g. 07/23/2025,
+07/26/2025, 08/15/2025" rows="3"></textarea>
       </div>
       <div class="form-group">
         <label for="sheetNameInput">Sheet Name:</label>
-        <input type="text" id="sheetNameInput" placeholder="Enter unique sheet name">
-        <div id="sheetNameValidation" style="display: none; color: red; font-size: 14px; margin-top: 5px;"></div>
+        <input type="text" id="sheetNameInput" placeholder="Enter
+unique sheet name">
+        <div id="sheetNameValidation" style="display: none; color:
+red; font-size: 14px; margin-top: 5px;"></div>
       </div>
-      <button class="btn" onclick="processForecast()">🚀 Process & Allocate Forecast Days</button>
-      <button class="btn" id="saveToDatabaseBtn" onclick="saveToDatabase()" disabled>💾 Save to Database</button>
+      <button class="btn" onclick="processForecast()">🚀 Process &
+Allocate Forecast Days</button>
+      <button class="btn" id="saveToDatabaseBtn"
+onclick="saveToDatabase()" disabled>💾 Save to Database</button>
       <div id="processingStatus"></div>
     </div>
 <div class="section">
   <h2>📋 Manage Forecast Sheets</h2>
-  <button class="btn" onclick="toggleSheetList('forecast')" id="toggleForecastBtn">
+  <button class="btn" onclick="toggleSheetList('forecast')"
+id="toggleForecastBtn">
     📂 Show Uploaded Sheets (<span id="forecastSheetCount">0</span>)
   </button>
   <div id="forecastSheetList" class="sheet-list" style="display: none;">
@@ -71,25 +80,34 @@
 <div class="section">
     <h2> Upload Observation Data</h2>
     <div class="form-group">
-      <label for="observationFileInput">Select Observation Excel File (in .xlsv format):</label>
+      <label for="observationFileInput">Select Observation Excel File
+(in .xlsv format):</label>
       <input type="file" id="observationFileInput" accept=".xlsx,.xls">
     </div>
     <div class="form-group">
-      <label for="observationHolidayInput">Enter Holidays for Observation (MM/DD/YYYY format, comma-separated):</label>
-      <textarea id="observationHolidayInput" placeholder="e.g. 07/23/2025, 07/26/2025, 08/15/2025" rows="3"></textarea>
+      <label for="observationHolidayInput">Enter Holidays for
+Observation (MM/DD/YYYY format, comma-separated):</label>
+      <textarea id="observationHolidayInput" placeholder="e.g.
+07/23/2025, 07/26/2025, 08/15/2025" rows="3"></textarea>
     </div>
     <div class="form-group">
       <label for="observationSheetNameInput">Sheet Name:</label>
-      <input type="text" id="observationSheetNameInput" placeholder="Enter unique observation sheet name">
-      <div id="observationSheetNameValidation" style="display: none; color: red; font-size: 14px; margin-top: 5px;"></div>
+      <input type="text" id="observationSheetNameInput"
+placeholder="Enter unique observation sheet name">
+      <div id="observationSheetNameValidation" style="display: none;
+color: red; font-size: 14px; margin-top: 5px;"></div>
     </div>
-    <button class="btn" onclick="processObservation()">🚀 Process Observation Data</button>
-    <button class="btn" id="saveObservationToDatabaseBtn" onclick="saveObservationToDatabase()" disabled>💾 Save Observation to Database</button>
+    <button class="btn" onclick="processObservation()">🚀 Process
+Observation Data</button>
+    <button class="btn" id="saveObservationToDatabaseBtn"
+onclick="saveObservationToDatabase()" disabled>💾 Save Observation to
+Database</button>
     <div id="observationProcessingStatus"></div>
 </div>
 <div class="section">
   <h2>📋 Manage Observation Sheets</h2>
-  <button class="btn" onclick="toggleSheetList('observation')" id="toggleObservationBtn">
+  <button class="btn" onclick="toggleSheetList('observation')"
+id="toggleObservationBtn">
     📂 Show Uploaded Sheets (<span id="observationSheetCount">0</span>)
   </button>
   <div id="observationSheetList" class="sheet-list" style="display: none;">
@@ -102,97 +120,124 @@
   </div>
 </div>
 <div class="section">
-    <h2> Forecast vs Observation Comparison</h2>
-    <div class="form-group">
-        <label for="comparisonDay">Select Day:</label>
-        <select id="comparisonDay">
-            <option value="">-- Select Day --</option>
-            <option value="Day1">Day 1</option>
-            <option value="Day2">Day 2</option>
-            <option value="Day3">Day 3</option>
-            <option value="Day4">Day 4</option>
-            <option value="Day5">Day 5</option>
-        </select>
-    </div>
-    <div class="form-group">
-        <label for="comparisonDistrict">Select District:</label>
-        <select id="comparisonDistrict">
-            <option value="">-- Select District --</option>
-        </select>
-    </div>
-    
-    
-    <div class="form-group">
-        <label for="comparisonParameter">Select Parameter:</label>
-        <select id="comparisonParameter">
-            <option value="">-- Select Parameter --</option>
-            <option value="rainfall">Rainfall (mm)</option>
-            <option value="temp_max_c">Temp Max (°C)</option>
-            <option value="temp_min_c">Temp Min (°C)</option>
-            <option value="humidity_1">Humidity Morning (%)</option>
-            <option value="humidity_2">Humidity Evening (%)</option>
-            <option value="wind_speed_kmph">Wind Speed (kmph)</option>
-            <option value="wind_direction_deg">Wind Direction (deg)</option>
-            <option value="cloud_cover_octa">Cloud Cover (octa)</option>
-        </select>
-    </div>
-    <div class="form-group">
-      <label for="comparisonStartDate">Start Date:</label>
-      <input type="date" id="comparisonStartDate" />
+  <h2> Forecast vs Observation Comparison</h2>
+  <div class="form-group">
+    <label for="comparisonDay">Select Day:</label>
+    <select id="comparisonDay">
+      <option value="">-- Select Day --</option>
+      <option value="Day1">Day 1</option>
+      <option value="Day2">Day 2</option>
+      <option value="Day3">Day 3</option>
+      <option value="Day4">Day 4</option>
+      <option value="Day5">Day 5</option>
+    </select>
   </div>
   <div class="form-group">
-      <label for="comparisonEndDate">End Date:</label>
-      <input type="date" id="comparisonEndDate" />
+    <label for="comparisonDistrict">Select District:</label>
+    <select id="comparisonDistrict">
+      <option value="">-- Select District --</option>
+    </select>
+  </div>
+
+
+  <div class="form-group">
+    <label for="comparisonParameter">Select Parameter:</label>
+    <select id="comparisonParameter">
+      <option value="">-- Select Parameter --</option>
+      <option value="rainfall">Rainfall (mm)</option>
+      <option value="temp_max_c">Temp Max (°C)</option>
+      <option value="temp_min_c">Temp Min (°C)</option>
+      <option value="humidity_1">Humidity Morning (%)</option>
+      <option value="humidity_2">Humidity Evening (%)</option>
+      <option value="wind_speed_kmph">Wind Speed (kmph)</option>
+      <option value="wind_direction_deg">Wind Direction (deg)</option>
+      <option value="cloud_cover_octa">Cloud Cover (octa)</option>
+    </select>
   </div>
   <div class="form-group">
-      <label>
-          <input type="checkbox" id="useDateRangeComparison" />
-          Use Date Range (if unchecked, uses processed data from above)
-      </label>
+    <label for="comparisonStartDate">Start Date:</label>
+    <input type="date" id="comparisonStartDate" />
+  </div>
+  <div class="form-group">
+    <label for="comparisonEndDate">End Date:</label>
+    <input type="date" id="comparisonEndDate" />
+  </div>
+  <div class="form-group">
+    <label>
+      <input type="checkbox" id="useDateRangeComparison" />
+      Use Date Range (if unchecked, uses processed data from above)
+    </label>
   </div>
   <div class="input-group">
     <label>
-      <input type="checkbox" id="useSpecificSheetsComparison"> 
+      <input type="checkbox" id="useSpecificSheetsComparison">
       Use Specific Sheets (otherwise uses all data)
     </label>
   </div>
-  
-    <div id="sheetSelectionComparison" style="display: none;">
+
+  <div id="sheetSelectionComparison" style="display: none;">
     <div class="input-group">
-        <label for="forecastSheetSelection">Select Forecast Sheet(s):</label>
-        <div id="forecastSheetCheckboxes" class="checkbox-group">
-          <!-- Checkboxes will be populated dynamically -->
-        </div>
+      <label for="forecastSheetSelection">Select Forecast Sheet(s):</label>
+      <div id="forecastSheetCheckboxes" class="checkbox-group">
+        <!-- Checkboxes will be populated dynamically -->
       </div>
+    </div>
     <div class="input-group">
-        <label for="observationSheetSelection">Select Observation Sheet(s):</label>
-        <div id="observationSheetCheckboxes" class="checkbox-group">
-          <!-- Checkboxes will be populated dynamically -->
-        </div>
+      <label for="observationSheetSelection">Select Observation
+Sheet(s):</label>
+      <div id="observationSheetCheckboxes" class="checkbox-group">
+        <!-- Checkboxes will be populated dynamically -->
       </div>
+    </div>
   </div>
-    <button class="btn" onclick="performComparison()">🔍 Analyze Comparison</button>
-    <div id="comparisonProcessingStatus"></div>
+  <button class="btn" onclick="performComparison()">🔍 Analyze
+Comparison</button>
+  <div id="comparisonProcessingStatus"></div>
+  <div style="margin-top: 12px;">
+    <button class="btn" style="background-color:#17a2b8;"
+onclick="computeAllDaysAllDistrictsRainfallFromFvO()">🧮 Compute
+Rainfall (All Days × Districts)</button>
+    <small style="display:block;color:#555;margin-top:6px;">Uses the
+exact Forecast vs Observation rainfall formula across all districts
+and days, then displays below.</small>
+  </div>
+</div>
+<div class="section" id="rainfallAllDaysResultsSection" style="display:none;">
+  <h2>🌧️ Rainfall Results (All Days × Districts via FvO)</h2>
+  <div id="rainfallAllDaysSummary"></div>
+  <div id="rainfallAllDaysTable" style="max-height: 600px; overflow:
+auto; border: 1px solid #ccc; border-radius: 8px;"></div>
+  <div style="margin-top: 16px;">
+    <button class="btn" style="background-color:#28a745;"
+onclick="exportRainfallAllDaysAllDistrictsComputed()">📁 Export
+Computed Rainfall Results</button>
+  </div>
 </div>
 <div class="section" id="comparisonResultsSection" style="display: none;">
     <h2>📈 Comparison Analysis Results</h2>
-    <div id="comparisonStats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;"></div> 
-    <div id="comparisonTable" style="max-height: 600px; overflow: auto; border: 1px solid #ccc; border-radius: 8px;"></div>
-    
+    <div id="comparisonStats" style="display: grid;
+grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:
+15px; margin-bottom: 20px;"></div>
+    <div id="comparisonTable" style="max-height: 600px; overflow:
+auto; border: 1px solid #ccc; border-radius: 8px;"></div>
+
     <div style="margin-top: 20px;">
-        <button class="btn" onclick="exportComparisonToExcel()">📁 Export Comparison Results</button>
+        <button class="btn" onclick="exportComparisonToExcel()">📁
+Export Comparison Results</button>
     </div>
 </div>
 <div class="section">
   <h2>📊 Comprehensive Analysis - All Districts & Parameters</h2>
-  
+
   <!-- Step 1: Calculate and Store All Days Data -->
   <div class="form-group">
     <h3>Step 1: Calculate & Store Data for All Days</h3>
     <label for="comprehensiveSheetName">Sheet Name for Storage:</label>
-    <input type="text" id="comprehensiveSheetName" placeholder="Enter unique sheet name for comprehensive analysis" />
-    <div id="comprehensiveSheetNameValidation" style="display: none; color: red; font-size: 14px; margin-top: 5px;"></div>
-    
+    <input type="text" id="comprehensiveSheetName" placeholder="Enter
+unique sheet name for comprehensive analysis" />
+    <div id="comprehensiveSheetNameValidation" style="display: none;
+color: red; font-size: 14px; margin-top: 5px;"></div>
+
     <div class="form-group">
       <label for="comprehensiveStartDate">Start Date:</label>
       <input type="date" id="comprehensiveStartDate" />
@@ -210,28 +255,46 @@
 
     <div class="input-group">
       <label>
-        <input type="checkbox" id="useSpecificSheetsComprehensive"> 
+        <input type="checkbox" id="useSpecificSheetsComprehensive">
         Use Specific Sheets (otherwise uses all data)
       </label>
     </div>
-    
+
     <div id="sheetSelectionComprehensive" style="display: none;">
       <div class="input-group">
-        <label for="forecastSheetSelectionComp">Select Forecast Sheet(s):</label>
+        <label for="forecastSheetSelectionComp">Select Forecast
+Sheet(s):</label>
         <div id="forecastSheetCheckboxesComp" class="checkbox-group">
           <!-- Checkboxes will be populated dynamically -->
         </div>
       </div>
       <div class="input-group">
-        <label for="observationSheetSelectionComp">Select Observation Sheet(s):</label>
+        <label for="observationSheetSelectionComp">Select Observation
+Sheet(s):</label>
         <div id="observationSheetCheckboxesComp" class="checkbox-group">
           <!-- Checkboxes will be populated dynamically -->
         </div>
       </div>
     </div>
-    
-    <button class="btn" onclick="calculateAndStoreAllDaysData()" style="background-color: #28a745;">🚀 Calculate & Store All Days Data</button>
+
+    <button class="btn" onclick="calculateAndStoreAllDaysData()"
+style="background-color: #28a745;">🚀 Calculate & Store All Days
+Data</button>
     <div id="allDaysProcessingStatus"></div>
+  </div>
+
+  <div class="section">
+    <h2>📋 Manage Comprehensive Sheets</h2>
+    <button class="btn" onclick="toggleComprehensiveSheetList()"
+id="toggleComprehensiveBtn">
+      📂 Show Uploaded Sheets (<span id="comprehensiveSheetCount">0</span>)
+    </button>
+    <div id="comprehensiveSheetList" class="sheet-list" style="display: none;">
+      <div id="comprehensiveSheetContent">
+        <p style="color: #666; font-style: italic;">No comprehensive
+sheets yet.</p>
+      </div>
+    </div>
   </div>
 
   <!-- Step 2: View Stored Data -->
@@ -241,7 +304,7 @@
     <select id="viewSheetName">
       <option value="">-- Select Sheet --</option>
     </select>
-    
+
     <label for="viewDaySelection">Select Day(s):</label>
     <select id="viewDaySelection">
       <option value="all">All Days</option>
@@ -251,9 +314,24 @@
       <option value="4">Day 4</option>
       <option value="5">Day 5</option>
     </select>
-    
-    <button class="btn" onclick="viewStoredComprehensiveData()" style="background-color: #17a2b8;">👁️ View Stored Data</button>
+
+    <button class="btn" onclick="viewStoredComprehensiveData()"
+style="background-color: #17a2b8;">👁️ View Stored Data</button>
     <div id="viewDataStatus"></div>
+  </div>
+
+  <!-- All Days Comprehensive Results (moved here) -->
+  <div class="section" id="allDaysComprehensiveResultsSection"
+style="display: none;">
+    <h2>📊 All Days Comprehensive Analysis Results</h2>
+    <div id="allDaysComprehensiveSummary"></div>
+    <div id="allDaysComprehensiveTable" style="max-height: 600px;
+overflow: auto; border: 1px solid #ccc; border-radius: 8px;"></div>
+    <div style="margin-top: 20px;">
+        <button class="btn"
+onclick="exportAllDaysComprehensiveToExcel()">📁 Export All Days
+Analysis</button>
+    </div>
   </div>
 
   <!-- Step 3: Generate Graphs for All Days -->
@@ -263,8 +341,10 @@
     <select id="graphSheetName">
       <option value="">-- Select Sheet --</option>
     </select>
-    
-    <button class="btn" onclick="generateAllDaysGraphs()" style="background-color: #ffc107; color: black;">📈 Generate All Days Graphs</button>
+
+    <button class="btn" onclick="generateAllDaysGraphs()"
+style="background-color: #ffc107; color: black;">📈 Generate All Days
+Graphs</button>
     <div id="graphGenerationStatus"></div>
   </div>
 
@@ -280,29 +360,24 @@
       <option value="Day4">Day 4</option>
       <option value="Day5">Day 5</option>
     </select>
-    
-    <button class="btn" onclick="performComprehensiveAnalysis()">🔍 Generate Single Day Report</button>
+
+    <button class="btn" onclick="performComprehensiveAnalysis()">🔍
+Generate Single Day Report</button>
     <div id="comprehensiveProcessingStatus"></div>
   </div>
 </div>
 <div class="section" id="comprehensiveResultsSection" style="display: none;">
   <h2>📈 Comprehensive Analysis Results</h2>
   <div id="comprehensiveSummary"></div>
-  <div id="comprehensiveTable" style="max-height: 600px; overflow: auto; border: 1px solid #ccc; border-radius: 8px;"></div>
+  <div id="comprehensiveTable" style="max-height: 600px; overflow:
+auto; border: 1px solid #ccc; border-radius: 8px;"></div>
   <div style="margin-top: 20px;">
-      <button class="btn" onclick="exportComprehensiveToExcel()">📁 Export Comprehensive Analysis</button>
+      <button class="btn" onclick="exportComprehensiveToExcel()">📁
+Export Comprehensive Analysis</button>
   </div>
 </div>
 
-<!-- New section for All Days Comprehensive Results -->
-<div class="section" id="allDaysComprehensiveResultsSection" style="display: none;">
-  <h2>📊 All Days Comprehensive Analysis Results</h2>
-  <div id="allDaysComprehensiveSummary"></div>
-  <div id="allDaysComprehensiveTable" style="max-height: 600px; overflow: auto; border: 1px solid #ccc; border-radius: 8px;"></div>
-  <div style="margin-top: 20px;">
-      <button class="btn" onclick="exportAllDaysComprehensiveToExcel()">📁 Export All Days Analysis</button>
-  </div>
-</div>
+<!-- moved earlier -->
 
 <!-- New section for All Days Graphs -->
 <div class="section" id="allDaysGraphsSection" style="display: none;">
@@ -311,7 +386,8 @@
     <!-- Graphs will be generated here -->
   </div>
   <div style="margin-top: 20px;">
-      <button class="btn" onclick="exportAllDaysGraphs()">📁 Export All Days Graphs</button>
+      <button class="btn" onclick="exportAllDaysGraphs()">📁 Export
+All Days Graphs</button>
   </div>
 </div>
 
@@ -321,29 +397,38 @@
   <div class="form-group">
     <label>Generate graphs for all parameters:</label>
   </div>
-  <button class="btn" onclick="generatePerformanceGraphs()">📈 Generate Performance Graphs (All Parameters)</button>
-  <button class="btn" onclick="debugPerformanceData()" style="background-color: #6c757d; margin-left: 10px;">🐛 Debug Data</button>
-  <button class="btn" onclick="recreatePerformanceData()" style="background-color: #17a2b8; margin-left: 10px;">🔄 Recreate Data</button>
+  <button class="btn" onclick="generatePerformanceGraphs()">📈
+Generate Performance Graphs (All Parameters)</button>
+  <button class="btn" onclick="debugPerformanceData()"
+style="background-color: #6c757d; margin-left: 10px;">🐛 Debug
+Data</button>
+  <button class="btn" onclick="recreatePerformanceData()"
+style="background-color: #17a2b8; margin-left: 10px;">🔄 Recreate
+Data</button>
   <div id="graphProcessingStatus"></div>
 </div>
 
 <div class="section" id="graphResultsSection" style="display: none;">
   <h2>📊 Performance Analysis Results</h2>
-  
+
   <!-- Performance Table -->
   <div class="performance-table-container">
     <h3>Performance Summary Table</h3>
-    <div id="performanceTable" style="max-height: 400px; overflow: auto; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 20px;"></div>
+    <div id="performanceTable" style="max-height: 400px; overflow:
+auto; border: 1px solid #ccc; border-radius: 8px; margin-bottom:
+20px;"></div>
   </div>
-  
+
   <!-- Performance Charts -->
   <div class="performance-charts-container">
     <h3>Performance Charts</h3>
-    <div id="performanceCharts" style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;"></div>
+    <div id="performanceCharts" style="display: flex; flex-wrap: wrap;
+gap: 20px; justify-content: center;"></div>
   </div>
-  
+
   <div style="margin-top: 20px;">
-    <button class="btn" onclick="exportPerformanceToExcel()">📁 Export Performance Analysis</button>
+    <button class="btn" onclick="exportPerformanceToExcel()">📁 Export
+Performance Analysis</button>
   </div>
 </div>
   <script src="full.js"></script>
