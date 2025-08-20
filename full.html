@@ -202,6 +202,14 @@ Rainfall (All Days × Districts)</button>
 exact Forecast vs Observation rainfall formula across all districts
 and days, then displays below.</small>
   </div>
+  <div style="margin-top: 8px;">
+    <button class="btn" style="background-color:#6c757d;"
+onclick="computeAllDaysAllDistrictsRainfallStatsFromFvO()">📊 Show
+Rainfall Statistical Summary (All Days × Districts)</button>
+    <small style="display:block;color:#555;margin-top:6px;">Displays
+RS, H.K. Score, FAR, POD, CSI, HSS, MR, C NON, BAIS, PC for each Day ×
+District.</small>
+  </div>
 </div>
 <div class="section" id="rainfallAllDaysResultsSection" style="display:none;">
   <h2>🌧️ Rainfall Results (All Days × Districts via FvO)</h2>
@@ -212,6 +220,17 @@ auto; border: 1px solid #ccc; border-radius: 8px;"></div>
     <button class="btn" style="background-color:#28a745;"
 onclick="exportRainfallAllDaysAllDistrictsComputed()">📁 Export
 Computed Rainfall Results</button>
+  </div>
+</div>
+<div class="section" id="rainfallAllDaysStatsSection" style="display:none;">
+  <h2>🌧️ Rainfall Statistical Summary (All Days × Districts via FvO)</h2>
+  <div id="rainfallAllDaysStatsSummary"></div>
+  <div id="rainfallAllDaysStatsTable" style="max-height: 600px;
+overflow:auto; border: 1px solid #ccc; border-radius: 8px;"></div>
+  <div style="margin-top: 16px;">
+    <button class="btn" style="background-color:#28a745;"
+onclick="exportRainfallAllDaysAllDistrictsStats()">📁 Export
+Statistical Summary</button>
   </div>
 </div>
 <div class="section" id="comparisonResultsSection" style="display: none;">

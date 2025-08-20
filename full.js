@@ -2632,6 +2632,174 @@ function exportRainfallAllDaysAllDistrictsComputed() {
   }
 }
 
+// Compute Rainfall Statistical Summary metrics (RS, HK, FAR, POD, CSI, HSS, MR, C NON, BAIS, PC)
+// for all Days × Districts using FvO logic and display as a table
+async function computeAllDaysAllDistrictsRainfallStatsFromFvO() {
+  try {
+    const days = [1,2,3,4,5];
+
+    // Require user to select specific sheets under the comparison section
+    const sheetSelection = validateSheetSelection('comparison');
+    if (!sheetSelection.isValid) {
+      alert('Please select at least one Forecast sheet and one Observation sheet (Use Specific Sheets).');
+      return;
+    }
+
+    // Pull distinct districts limited to the selected forecast sheets
+    const { data: districtsData, error: dErr } = await client
+      .from('full_forecast')
+      .select('district_name')
+      .in('sheet_name', sheetSelection.forecastSheets)
+      .not('district_name','is',null);
+    if (dErr) throw dErr;
+    const districts = [...new Set((districtsData||[]).map(r =>
+r.district_name).filter(Boolean))].sort();
+
+    // Fetch all rainfall pairs up front
+    const fcQuery = client
+      .from('full_forecast')
+      .select('day_number, district_name, forecast_date, rainfall')
+      .in('day_number', days)
+      .in('sheet_name', sheetSelection.forecastSheets);
+    const obsQuery = client
+      .from('full_observation')
+      .select('day_number, district_name, observation_date, rainfall')
+      .in('day_number', days)
+      .in('sheet_name', sheetSelection.observationSheets);
+
+    const [fcRows, obsRows] = await Promise.all([
+      fetchAllRows(fcQuery, 'forecast_date', true),
+      fetchAllRows(obsQuery, 'observation_date', true)
+    ]);
+
+    // Group by day/district
+    const fcMap = {};
+    fcRows.forEach(r => {
+      const d = r.day_number, dist = r.district_name;
+      if (!fcMap[d]) fcMap[d] = {};
+      if (!fcMap[d][dist]) fcMap[d][dist] = [];
+      fcMap[d][dist].push({ forecast_date: r.forecast_date, rainfall:
+r.rainfall });
+    });
+    const obsMap = {};
+    obsRows.forEach(r => {
+      const d = r.day_number, dist = r.district_name;
+      if (!obsMap[d]) obsMap[d] = {};
+      if (!obsMap[d][dist]) obsMap[d][dist] = [];
+      obsMap[d][dist].push({ observation_date: r.observation_date,
+rainfall: r.rainfall });
+    });
+
+    // Build result rows
+    const resultRows = [];
+    for (const day of days) {
+      for (const dist of districts) {
+        const fcArr = (fcMap[day] && fcMap[day][dist]) ? fcMap[day][dist] : [];
+        const obArr = (obsMap[day] && obsMap[day][dist]) ?
+obsMap[day][dist] : [];
+
+        if (fcArr.length === 0 && obArr.length === 0) {
+          resultRows.push({
+            Day: `Day ${day}`,
+            District: dist,
+            RS: '-', HK: '-', FAR: '-', POD: '-', CSI: '-', HSS: '-',
+MR: '-', CNON: '-', BAIS: '-', PC: '-'
+          });
+          continue;
+        }
+
+        const comp = createComparisonData(fcArr, obArr, 'rainfall');
+        const statistics = calculateRainfallStatistics(comp);
+
+        resultRows.push({
+          Day: `Day ${day}`,
+          District: dist,
+          RS: isNaN(statistics.rs) ? '-' : statistics.rs.toFixed(2) + '%',
+          HK: isNaN(statistics.hk) ? '-' : statistics.hk.toFixed(3),
+          FAR: isNaN(statistics.far) ? '-' : statistics.far.toFixed(3),
+          POD: isNaN(statistics.pod) ? '-' : statistics.pod.toFixed(3),
+          CSI: isNaN(statistics.csi) ? '-' : statistics.csi.toFixed(3),
+          HSS: isNaN(statistics.hss) ? '-' : statistics.hss.toFixed(3),
+          MR: isNaN(statistics.mr) ? '-' : statistics.mr.toFixed(3),
+          CNON: isNaN(statistics.cnon) ? '-' : statistics.cnon.toFixed(3),
+          BAIS: isNaN(statistics.bias) ? '-' : statistics.bias.toFixed(3),
+          PC: isNaN(statistics.pc) ? '-' : statistics.pc.toFixed(2) + '%'
+        });
+      }
+    }
+
+    // Render to page
+    const section = document.getElementById('rainfallAllDaysStatsSection');
+    const summary = document.getElementById('rainfallAllDaysStatsSummary');
+    const tableDiv = document.getElementById('rainfallAllDaysStatsTable');
+    if (section) section.style.display = 'none';
+
+    summary.innerHTML = `<div
+style="background:#f8f9fa;padding:10px;border-radius:8px;">Computed
+using Rainfall Statistical Summary metrics for all districts and
+days.</div>`;
+
+    // Build HTML table
+    let html = '<table style="width:100%;font-size:12px;">';
+    html += '<thead><tr><th>Day</th><th>District</th><th>RS</th><th>H.K.Score</th><th>FAR</th><th>POD</th><th>CSI</th><th>HSS</th><th>MR</th><th>C NON</th><th>BAIS</th><th>PC</th></tr></thead><tbody>';
+    resultRows.forEach(r => {
+      html += `<tr>
+        <td>${r.Day}</td>
+        <td>${r.District}</td>
+        <td>${r.RS}</td>
+        <td>${r.HK}</td>
+        <td>${r.FAR}</td>
+        <td>${r.POD}</td>
+        <td>${r.CSI}</td>
+        <td>${r.HSS}</td>
+        <td>${r.MR}</td>
+        <td>${r.CNON}</td>
+        <td>${r.BAIS}</td>
+        <td>${r.PC}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    tableDiv.innerHTML = html;
+    if (section) section.style.display = 'block';
+  } catch (e) {
+    alert('Compute failed: ' + e.message);
+    console.error('computeAllDaysAllDistrictsRainfallStatsFromFvO error:', e);
+  }
+}
+
+function exportRainfallAllDaysAllDistrictsStats() {
+  try {
+    const table = document.getElementById('rainfallAllDaysStatsTable');
+    if (!table || !table.querySelector('table')) {
+      alert('No statistical summary to export.');
+      return;
+    }
+    // Extract from DOM table into JSON
+    const rows = Array.from(table.querySelectorAll('tbody tr')).map(tr => {
+      const tds = tr.querySelectorAll('td');
+      return {
+        Day: tds[0]?.textContent || '',
+        District: tds[1]?.textContent || '',
+        RS: tds[2]?.textContent || '',
+        HK: tds[3]?.textContent || '',
+        FAR: tds[4]?.textContent || '',
+        POD: tds[5]?.textContent || '',
+        CSI: tds[6]?.textContent || '',
+        HSS: tds[7]?.textContent || '',
+        MR: tds[8]?.textContent || '',
+        CNON: tds[9]?.textContent || '',
+        BAIS: tds[10]?.textContent || '',
+        PC: tds[11]?.textContent || ''
+      };
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Rainfall_Stats_All_Days_Districts');
+    XLSX.writeFile(wb, 'Rainfall_FvO_AllDays_Districts_Stats.xlsx');
+  } catch (e) {
+    alert('Export failed: ' + e.message);
+  }
+}
 
 
 /**
