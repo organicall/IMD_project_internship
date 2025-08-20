@@ -184,30 +184,28 @@
     </div>
 </div>
 <div class="section">
-  <h2> Comprehensive Analysis - All Districts & Parameters</h2>
+  <h2>📊 Comprehensive Analysis - All Districts & Parameters</h2>
+  
+  <!-- Step 1: Calculate and Store All Days Data -->
   <div class="form-group">
-      <label for="comprehensiveDay">Select Day for Comprehensive Analysis:</label>
-      <select id="comprehensiveDay">
-          <option value="">-- Select Day --</option>
-          <option value="Day1">Day 1</option>
-          <option value="Day2">Day 2</option>
-          <option value="Day3">Day 3</option>
-          <option value="Day4">Day 4</option>
-          <option value="Day5">Day 5</option>
-      </select>
-      <div class="form-group">
-        <label for="comprehensiveStartDate">Start Date:</label>
-        <input type="date" id="comprehensiveStartDate" />
+    <h3>Step 1: Calculate & Store Data for All Days</h3>
+    <label for="comprehensiveSheetName">Sheet Name for Storage:</label>
+    <input type="text" id="comprehensiveSheetName" placeholder="Enter unique sheet name for comprehensive analysis" />
+    <div id="comprehensiveSheetNameValidation" style="display: none; color: red; font-size: 14px; margin-top: 5px;"></div>
+    
+    <div class="form-group">
+      <label for="comprehensiveStartDate">Start Date:</label>
+      <input type="date" id="comprehensiveStartDate" />
     </div>
     <div class="form-group">
-        <label for="comprehensiveEndDate">End Date:</label>
-        <input type="date" id="comprehensiveEndDate" />
+      <label for="comprehensiveEndDate">End Date:</label>
+      <input type="date" id="comprehensiveEndDate" />
     </div>
     <div class="form-group">
-        <label>
-            <input type="checkbox" id="useDateRangeComprehensive" />
-            Use Date Range (if unchecked, uses processed data from above)
-        </label>
+      <label>
+        <input type="checkbox" id="useDateRangeComprehensive" />
+        Use Date Range (if unchecked, uses processed data from above)
+      </label>
     </div>
 
     <div class="input-group">
@@ -232,9 +230,60 @@
       </div>
     </div>
     
+    <button class="btn" onclick="calculateAndStoreAllDaysData()" style="background-color: #28a745;">🚀 Calculate & Store All Days Data</button>
+    <div id="allDaysProcessingStatus"></div>
   </div>
-  <button class="btn" onclick="performComprehensiveAnalysis()">🔍 Generate Comprehensive Report</button>
-  <div id="comprehensiveProcessingStatus"></div>
+
+  <!-- Step 2: View Stored Data -->
+  <div class="form-group">
+    <h3>Step 2: View Stored Data</h3>
+    <label for="viewSheetName">Select Sheet to View:</label>
+    <select id="viewSheetName">
+      <option value="">-- Select Sheet --</option>
+    </select>
+    
+    <label for="viewDaySelection">Select Day(s):</label>
+    <select id="viewDaySelection">
+      <option value="all">All Days</option>
+      <option value="1">Day 1</option>
+      <option value="2">Day 2</option>
+      <option value="3">Day 3</option>
+      <option value="4">Day 4</option>
+      <option value="5">Day 5</option>
+    </select>
+    
+    <button class="btn" onclick="viewStoredComprehensiveData()" style="background-color: #17a2b8;">👁️ View Stored Data</button>
+    <div id="viewDataStatus"></div>
+  </div>
+
+  <!-- Step 3: Generate Graphs for All Days -->
+  <div class="form-group">
+    <h3>Step 3: Generate Graphs for All Days</h3>
+    <label for="graphSheetName">Select Sheet for Graphs:</label>
+    <select id="graphSheetName">
+      <option value="">-- Select Sheet --</option>
+    </select>
+    
+    <button class="btn" onclick="generateAllDaysGraphs()" style="background-color: #ffc107; color: black;">📈 Generate All Days Graphs</button>
+    <div id="graphGenerationStatus"></div>
+  </div>
+
+  <!-- Original single day analysis -->
+  <div class="form-group">
+    <h3>Single Day Analysis (Original)</h3>
+    <label for="comprehensiveDay">Select Day for Single Analysis:</label>
+    <select id="comprehensiveDay">
+      <option value="">-- Select Day --</option>
+      <option value="Day1">Day 1</option>
+      <option value="Day2">Day 2</option>
+      <option value="Day3">Day 3</option>
+      <option value="Day4">Day 4</option>
+      <option value="Day5">Day 5</option>
+    </select>
+    
+    <button class="btn" onclick="performComprehensiveAnalysis()">🔍 Generate Single Day Report</button>
+    <div id="comprehensiveProcessingStatus"></div>
+  </div>
 </div>
 <div class="section" id="comprehensiveResultsSection" style="display: none;">
   <h2>📈 Comprehensive Analysis Results</h2>
@@ -242,6 +291,27 @@
   <div id="comprehensiveTable" style="max-height: 600px; overflow: auto; border: 1px solid #ccc; border-radius: 8px;"></div>
   <div style="margin-top: 20px;">
       <button class="btn" onclick="exportComprehensiveToExcel()">📁 Export Comprehensive Analysis</button>
+  </div>
+</div>
+
+<!-- New section for All Days Comprehensive Results -->
+<div class="section" id="allDaysComprehensiveResultsSection" style="display: none;">
+  <h2>📊 All Days Comprehensive Analysis Results</h2>
+  <div id="allDaysComprehensiveSummary"></div>
+  <div id="allDaysComprehensiveTable" style="max-height: 600px; overflow: auto; border: 1px solid #ccc; border-radius: 8px;"></div>
+  <div style="margin-top: 20px;">
+      <button class="btn" onclick="exportAllDaysComprehensiveToExcel()">📁 Export All Days Analysis</button>
+  </div>
+</div>
+
+<!-- New section for All Days Graphs -->
+<div class="section" id="allDaysGraphsSection" style="display: none;">
+  <h2>📈 All Days Performance Graphs</h2>
+  <div id="allDaysGraphsContainer">
+    <!-- Graphs will be generated here -->
+  </div>
+  <div style="margin-top: 20px;">
+      <button class="btn" onclick="exportAllDaysGraphs()">📁 Export All Days Graphs</button>
   </div>
 </div>
 
