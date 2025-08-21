@@ -722,7 +722,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 function setupEventListeners() {
   document.getElementById('fileInput').addEventListener('change', handleFileUpload);
   document.getElementById('sheetNameInput').addEventListener('input', validateSheetName);
+  // Add event listener for comprehensive sheet name validation
+  const comprehensiveSheetNameInput = document.getElementById('comprehensiveSheetName');
+  if (comprehensiveSheetNameInput) {
+    comprehensiveSheetNameInput.addEventListener('input', validateComprehensiveSheetName);
+  }
 }
+
 function setupObservationEventListeners() {
     document.getElementById('observationFileInput').addEventListener('change', handleObservationFileUpload);
     document.getElementById('observationSheetNameInput').addEventListener('input', validateObservationSheetName);
@@ -742,10 +748,6 @@ function setupObservationEventListeners() {
       });
     }
   }
-
-// Helper function to fetch all rows from a table with pagination
-
-
 
 // Load existing sheet names for validation
 async function loadExistingSheetNames() {
@@ -4564,6 +4566,303 @@ function populateSheetDropdowns(type) {
     // Add summary section after both checkbox groups are populated
     addSheetSelectionSummary(type);
   }, 100);
+}
+
+// Calculate and Store All Days Data for Comprehensive Analysis
+async function calculateAndStoreAllDaysData() {
+  try {
+    // Get sheet name and validate
+    const sheetNameInput = document.getElementById('comprehensiveSheetName');
+    const sheetName = sheetNameInput ? sheetNameInput.value.trim() : '';
+
+    if (!sheetName) {
+      showAllDaysStatus('❌ Please enter a sheet name for storage.', 'error');
+      return;
+    }
+
+    // Check if sheet name already exists
+    const { data: existingSheets } = await client
+      .from('comprehensive_analysis')
+      .select('sheet_name')
+      .eq('sheet_name', sheetName)
+      .limit(1);
+
+    if (existingSheets && existingSheets.length > 0) {
+      showAllDaysStatus(`❌ Sheet name "${sheetName}" already exists. Please choose a different name.`, 'error');
+      return;
+    }
+
+    // Get data source options
+    const useDateRange = document.getElementById('useDateRangeComprehensive') ? document.getElementById('useDateRangeComprehensive').checked : false;
+    const useSpecificSheets = document.getElementById('useSpecificSheetsComprehensive') ? document.getElementById('useSpecificSheetsComprehensive').checked : false;
+
+    let forecastData = [];
+    let observationData = [];
+
+    showAllDaysStatus('🔍 Loading data for comprehensive analysis...', 'info');
+
+    if (useSpecificSheets) {
+      // Use specific sheets
+      const sheetSelection = validateSheetSelection('comprehensive');
+      if (!sheetSelection.isValid) {
+        if (sheetSelection.forecastCount === 0) {
+          showAllDaysStatus('❌ Please select at least one forecast sheet.', 'error');
+        } else {
+          showAllDaysStatus('❌ Please select at least one observation sheet.', 'error');
+        }
+        return;
+      }
+
+      const forecastSheets = sheetSelection.forecastSheets;
+      const observationSheets = sheetSelection.observationSheets;
+
+      // Get date range if specified
+      let dateRangeStart = null;
+      let dateRangeEnd = null;
+      if (useDateRange) {
+        const startDate = document.getElementById('comprehensiveStartDate') ?
+          document.getElementById('comprehensiveStartDate').value : '';
+        const endDate = document.getElementById('comprehensiveEndDate') ?
+          document.getElementById('comprehensiveEndDate').value : '';
+
+        if (!startDate || !endDate) {
+          showAllDaysStatus('❌ Please enter both start and end dates when using date range.', 'error');
+          return;
+        }
+        dateRangeStart = startDate;
+        dateRangeEnd = endDate;
+      }
+
+      const { forecastData: dbForecastData, observationData: dbObservationData } =
+        await loadDataBySheets(forecastSheets, observationSheets, dateRangeStart, dateRangeEnd);
+
+      forecastData = dbForecastData;
+      observationData = dbObservationData;
+
+    } else if (useDateRange) {
+      // Use date range with all data
+      const startDate = document.getElementById('comprehensiveStartDate') ?
+        document.getElementById('comprehensiveStartDate').value : '';
+      const endDate = document.getElementById('comprehensiveEndDate') ?
+        document.getElementById('comprehensiveEndDate').value : '';
+
+      if (!startDate || !endDate) {
+        showAllDaysStatus('❌ Please enter both start and end dates.', 'error');
+        return;
+      }
+
+      const [dbForecastData, dbObservationData] = await Promise.all([
+        loadForecastDataByDateRange(startDate, endDate),
+        loadObservationDataByDateRange(startDate, endDate)
+      ]);
+
+      forecastData = dbForecastData;
+      observationData = dbObservationData;
+
+    } else {
+      // Use existing processed data
+      if (processedOutput.length === 0) {
+        showAllDaysStatus('❌ No forecast data available. Please process forecast data first or enable date range/sheet selection.',
+'error');
+        return;
+      }
+
+      if (processedObservationOutput.length === 0) {
+        showAllDaysStatus('❌ No observation data available. Please process observation data first or enable date range/sheet selection.',
+'error');
+        return;
+      }
+
+      forecastData = processedOutput;
+      observationData = processedObservationOutput;
+    }
+
+    if (forecastData.length === 0) {
+      showAllDaysStatus('❌ No forecast data found for the selected criteria.', 'error');
+      return;
+    }
+
+    if (observationData.length === 0) {
+      showAllDaysStatus('❌ No observation data found for the selected criteria.', 'error');
+      return;
+    }
+
+    showAllDaysStatus('🔍 Performing comprehensive analysis for all days...', 'info');
+
+    // Get all unique districts and parameters
+    const allDistricts = [...new Set(forecastData.map(row => row.district_name))];
+    const parameters = ['rainfall', 'temp_max_c', 'temp_min_c', 'humidity_1', 'humidity_2', 'wind_speed_kmph', 'wind_direction_deg', 'cloud_cover_octa'];
+
+    // Prepare data for database insertion
+    const dbData = [];
+
+    // Process each day (1-5)
+    for (let dayNumber = 1; dayNumber <= 5; dayNumber++) {
+      showAllDaysStatus(`🔍 Processing Day ${dayNumber}...`, 'info');
+
+      for (const district of allDistricts) {
+        // Filter data for this district and day
+        const dayForecastData = forecastData.filter(row =>
+          normalizeDistrictName(row.district_name) === normalizeDistrictName(district) &&
+          row.day_number === dayNumber
+        );
+
+        const dayObservationData = observationData.filter(row =>
+          normalizeDistrictName(row.district_name) === normalizeDistrictName(district) &&
+          row.day_number === dayNumber
+        );
+
+        if (dayForecastData.length === 0 || dayObservationData.length === 0) {
+          continue; // Skip if no data for this district/day combination
+        }
+
+        // Analyze each parameter
+        for (const parameter of parameters) {
+          const comparisonData = createComparisonData(dayForecastData, dayObservationData, parameter);
+          const statistics = calculateStatistics(comparisonData, parameter);
+
+          const dbRow = {
+            sheet_name: sheetName,
+            day_number: dayNumber,
+            district_name: district,
+            parameter_name: parameter
+          };
+
+          if (parameter === 'rainfall') {
+            // Use new rainfall scoring based on sums over matching cases (YY + NN)
+            const matchingCases = (statistics.YY || 0) + (statistics.NN || 0);
+            const denom = matchingCases;
+            const newCorrect = denom > 0 ? (statistics.correctSum / denom) * 100 : 0;
+            const newUsable = denom > 0 ? (statistics.usableSum / denom) * 100 : 0;
+            const newUnusable = denom > 0 ? (statistics.unusableSum / denom) * 100 : 0;
+
+            Object.assign(dbRow, {
+              rainfall_correct: newCorrect,
+              rainfall_usable: newUsable,
+              rainfall_unusable: newUnusable,
+              rainfall_correct_plus_usable: newCorrect + newUsable,
+              rainfall_valid_days: statistics.validDays,
+              rainfall_missing_days: statistics.missingDays,
+              rainfall_yy: statistics.YY,
+              rainfall_yn: statistics.YN,
+              rainfall_ny: statistics.NY,
+              rainfall_nn: statistics.NN,
+              rainfall_yu: statistics.YU,
+              rainfall_nu: statistics.NU,
+              rainfall_matching_cases: matchingCases,
+              rainfall_total_days: statistics.totalDays
+            });
+          } else {
+            Object.assign(dbRow, {
+              parameter_correct: statistics.correct,
+              parameter_usable: statistics.usable,
+              parameter_unusable: statistics.unusable,
+              parameter_correct_plus_usable: statistics.correct +
+statistics.usable,
+              parameter_valid_days: statistics.validDays,
+              parameter_missing_days: statistics.missingDays,
+              parameter_n1: statistics.n1,
+              parameter_n2: statistics.n2,
+              parameter_n3: statistics.n3,
+              parameter_threshold1: statistics.threshold1,
+              parameter_threshold2: statistics.threshold2,
+              parameter_use_n11_for_unusable: statistics.useN11ForUnusable
+            });
+          }
+
+          dbData.push(dbRow);
+        }
+      }
+    }
+
+    if (dbData.length === 0) {
+      showAllDaysStatus('❌ No analysis data generated. Please check your data and criteria.', 'error');
+      return;
+    }
+
+    showAllDaysStatus('💾 Storing analysis results in database...', 'info');
+
+    // Insert data into comprehensive_analysis table
+    const { error } = await client
+      .from('comprehensive_analysis')
+      .insert(dbData);
+
+    if (error) {
+      throw error;
+    }
+
+    showAllDaysStatus(`✅ Successfully stored ${dbData.length} analysis
+records for sheet "${sheetName}".`, 'success');
+
+    // Clear the sheet name input
+    if (sheetNameInput) {
+      sheetNameInput.value = '';
+    }
+
+    // Refresh the comprehensive sheets list
+    await refreshComprehensiveSheetsUI();
+    await loadComprehensiveSheetNames();
+
+  } catch (error) {
+    console.error('Error in calculateAndStoreAllDaysData:', error);
+    showAllDaysStatus('❌ Error calculating and storing all days data: ' + error.message, 'error');
+  }
+}
+
+// Helper function to show status messages for all days processing
+function showAllDaysStatus(message, type) {
+  const statusDiv = document.getElementById('allDaysProcessingStatus');
+  if (!statusDiv) return;
+
+  let className = 'status-message ';
+  switch (type) {
+    case 'success':
+      className += 'status-success';
+      break;
+    case 'error':
+      className += 'status-error';
+      break;
+    case 'info':
+    default:
+      className += 'status-info';
+      break;
+  }
+
+  statusDiv.innerHTML = `<div class="${className}">${message}</div>`;
+
+  // Auto-hide success/info messages after 5 seconds
+  if (type === 'success' || type === 'info') {
+    setTimeout(() => {
+      if (statusDiv.innerHTML.includes(message)) {
+        statusDiv.innerHTML = '';
+      }
+    }, 5000);
+  }
+}
+
+// Validate comprehensive sheet name
+function validateComprehensiveSheetName() {
+  const sheetName =
+document.getElementById('comprehensiveSheetName').value.trim();
+  const validationDiv =
+document.getElementById('comprehensiveSheetNameValidation');
+
+  if (!sheetName) {
+    validationDiv.textContent = "Please enter a sheet name for comprehensive analysis.";
+    validationDiv.style.display = "block";
+    return false;
+  }
+
+  // Check if sheet name already exists in comprehensive_analysis table
+  // This will be checked again when the function is called, but we can do a basic validation here
+  if (sheetName.length < 3) {
+    validationDiv.textContent = "Sheet name must be at least 3 characters long.";
+    validationDiv.style.display = "block";
+    return false;
+  }
+
+  validationDiv.style.display = "none";
+  return true;
 }
 
 // Load distinct comprehensive sheet names and populate Step 2/3 dropdowns
