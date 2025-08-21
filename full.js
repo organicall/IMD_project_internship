@@ -3070,6 +3070,41 @@ function calculateStatistics(comparisonData, parameter) {
   let threshold1, threshold2;
   let useN11ForUnusable = false;
 
+// --- WIND DIRECTION SPECIAL LOGIC ---
+if (parameter === 'wind_direction_deg') {
+  // Apply the new formula as per your description
+  const N = validDays;
+  let N1 = 0, N3 = 0, N11 = 0;
+  for (let i = 0; i < validData.length; i++) {
+    const diff = Math.abs(validData[i].observationValue -
+validData[i].forecastValue);
+    if (diff <= 30) N1++;
+    if (diff > 30) N3++;
+    if (diff > 40) N11++;
+  }
+  const N2 = Math.abs(N11 - N3);
+  const correct = N ? (N1 / N) * 100 : 0;
+  const usable = N ? (N2 / N) * 100 : 0;
+  const unusable = N ? (N11 / N) * 100 : 0;
+  return {
+    totalDays: totalDays,
+    missingDays: missingDays,
+    validDays: N,
+    n1: N1,
+    n2: N2,
+    n3: N3,
+    n11: N11,
+    correct: correct,
+    usable: usable,
+    unusable: unusable,
+    threshold1: 30,
+    threshold2: 40,
+    useN11ForUnusable: true,
+    isRainfall: false
+  };
+}
+// --- END WIND DIRECTION SPECIAL LOGIC ---
+
   switch (parameter) {
     case 'temp_max_c':
     case 'temp_min_c':
@@ -3087,8 +3122,14 @@ function calculateStatistics(comparisonData, parameter) {
     case 'wind_direction_deg':
       threshold1 = 7.2;
       threshold2 = 14.4;
-      useN11ForUnusable = true;
+      useN11ForUnusable = false;
       break;
+
+    // case 'wind_direction_deg':
+    //   threshold1 = 30.0; 
+    //   threshold2 = 40.0; 
+    //   useN11ForUnusable = true;  
+    //   break;
 
     case 'cloud_cover_octa':
       threshold1 = 2.0;
@@ -3102,25 +3143,23 @@ function calculateStatistics(comparisonData, parameter) {
   }
 
 
-  const n1 = validData.filter(item => item.absoluteDifference <=
-threshold1).length;
-  const n11 = validData.filter(item => item.absoluteDifference >
-threshold1).length;
-  const n3 = validData.filter(item => item.absoluteDifference >
-threshold2).length;
+  const n1 = validData.filter(item => item.absoluteDifference <= threshold1).length;
+  const n11 = validData.filter(item => item.absoluteDifference > threshold1).length;
+  const n3 = validData.filter(item => item.absoluteDifference > threshold2).length;
   const n2 = n11 - n3;
+
+
 
   const correct = (n1 / validDays) * 100;
   const usable = (n2 / validDays) * 100;
-  const unusable = useN11ForUnusable ? (n11 / validDays) * 100 : (n3 /
-validDays) * 100;
+  const unusable = useN11ForUnusable ? (n11 / validDays) * 100 : (n3 / validDays) * 100;
 
   return {
     totalDays: totalDays,
     missingDays: missingDays,
     validDays: validDays,
     n1: n1,
-    n2: n2,
+    n2: n2, 
     n3: n3,
     n11: n11,
     correct: correct,
@@ -3149,19 +3188,14 @@ district, parameter) {
 
   if (statistics.isRainfall) {
       // For rainfall: show new calculated percentages based on sums
-      const newCorrectPercent = (statistics.YY + statistics.NN) > 0 ?
-(statistics.correctSum / (statistics.YY + statistics.NN)) * 100 : 0;
-      const newUsablePercent = (statistics.YY + statistics.NN) > 0 ?
-(statistics.usableSum / (statistics.YY + statistics.NN)) * 100 : 0;
-      const newUnusablePercent = (statistics.YY + statistics.NN) > 0 ?
-(statistics.unusableSum / (statistics.YY + statistics.NN)) * 100 : 0;
+      const newCorrectPercent = (statistics.YY + statistics.NN) > 0 ? (statistics.correctSum / (statistics.YY + statistics.NN)) * 100 : 0;
+      const newUsablePercent = (statistics.YY + statistics.NN) > 0 ? (statistics.usableSum / (statistics.YY + statistics.NN)) * 100 : 0;
+      const newUnusablePercent = (statistics.YY + statistics.NN) > 0 ? (statistics.unusableSum / (statistics.YY + statistics.NN)) * 100 : 0;
 
       statsDiv.innerHTML = `
-        <div style="background: #d4edda; padding: 15px; border-radius:
-10px; text-align: center;">
+        <div style="background: #d4edda; padding: 15px; border-radius: 10px; text-align: center;">
           <h4 style="color: #155724; margin: 0;">Correct</h4>
-          <div style="font-size: 24px; font-weight: bold; color:
-#155724;">${newCorrectPercent.toFixed(1)}%</div>
+          <div style="font-size: 24px; font-weight: bold; color: #155724;">${newCorrectPercent.toFixed(1)}%</div>
           <small>Based on new scoring system</small>
         </div>
         <div style="background: #fff3cd; padding: 15px; border-radius:
@@ -3205,10 +3239,16 @@ district, parameter) {
           break;
 
         case 'wind_speed_kmph':
-        case 'wind_direction_deg':
+        //case 'wind_direction_deg':
           threshold1Label = '≤ 7.2 difference';
           threshold2Label = '7.2 < diff ≤ 14.4';
           unusableLabel = '> 7.2 difference';
+          break;
+        
+          case 'wind_direction_deg':
+            threshold1Label = '≤ 30 difference';
+          threshold2Label = '30 < diff ≤ 40';
+          unusableLabel = '> 30 difference';
           break;
 
         case 'cloud_cover_octa':
@@ -3376,23 +3416,16 @@ district, parameter) {
 
       // Add summary row with totals
       tableHtml += `
-        <div style="margin-top: 20px; padding: 15px; background:
-#e9ecef; border-radius: 5px;">
+        <div style="margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 5px;">
           <h5 style="margin: 0 0 10px 0;">Table Summary</h5>
           <table style="width: 100%; border-collapse: collapse;">
             <tr style="background: #f8f9fa;">
-              <td style="padding: 8px; border: 1px solid
-#dee2e6;"><strong>Total Correct Score:</strong></td>
-              <td style="padding: 8px; border: 1px solid #dee2e6;
-text-align: center;"><strong>${statistics.correctSum}</strong></td>
-              <td style="padding: 8px; border: 1px solid
-#dee2e6;"><strong>Total Usable Score:</strong></td>
-              <td style="padding: 8px; border: 1px solid #dee2e6;
-text-align: center;"><strong>${statistics.usableSum}</strong></td>
-              <td style="padding: 8px; border: 1px solid
-#dee2e6;"><strong>Total Unusable Score:</strong></td>
-              <td style="padding: 8px; border: 1px solid #dee2e6;
-text-align: center;"><strong>${statistics.unusableSum}</strong></td>
+              <td style="padding: 8px; border: 1px solid #dee2e6;"><strong>Total Correct Score:</strong></td>
+              <td style="padding: 8px; border: 1px solid #dee2e6; text-align: center;"><strong>${statistics.correctSum}</strong></td>
+              <td style="padding: 8px; border: 1px solid #dee2e6;"><strong>Total Usable Score:</strong></td>
+              <td style="padding: 8px; border: 1px solid #dee2e6; text-align: center;"><strong>${statistics.usableSum}</strong></td>
+              <td style="padding: 8px; border: 1px solid #dee2e6;"><strong>Total Unusable Score:</strong></td>
+              <td style="padding: 8px; border: 1px solid #dee2e6; text-align: center;"><strong>${statistics.unusableSum}</strong></td>
             </tr>
           </table>
         </div>
@@ -3400,60 +3433,36 @@ text-align: center;"><strong>${statistics.unusableSum}</strong></td>
 
       // Rainfall Statistical Summary with detailed metrics table
       tableHtml += `
-        <div style="margin-top: 30px; padding: 20px; background:
-#f8f9fa; border-radius: 10px;">
+        <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 10px;">
           <h4>Rainfall Statistical Summary</h4>
           <div style="overflow-x:auto; margin-bottom: 20px;">
-            <table style="width:100%; border-collapse:collapse;
-background:#f8f9fa;">
+            <table style="width:100%; border-collapse:collapse; background:#f8f9fa;">
               <thead>
                 <tr style="background:#e9ecef;">
                   <th style="padding:8px; border:1px solid #dee2e6;">Metric</th>
-                  <th style="padding:8px; border:1px solid
-#dee2e6;">Formula</th>
+                  <th style="padding:8px; border:1px solid #dee2e6;">Formula</th>
                   <th style="padding:8px; border:1px solid #dee2e6;">Value</th>
                 </tr>
               </thead>
               <tbody>
-                <tr><td>YY</td><td>Rain forecast & observed
-(&ne;0)</td><td>${statistics.YY}</td></tr>
-                <tr><td>YN</td><td>Rain forecast, not observed
-(forecast &ne;0, obs=0)</td><td>${statistics.YN}</td></tr>
-                <tr><td>NY</td><td>No rain forecast, rain observed
-(forecast=0, obs &ne;0)</td><td>${statistics.NY}</td></tr>
-                <tr><td>NN</td><td>No rain forecast & not observed
-(both=0)</td><td>${statistics.NN}</td></tr>
-                <tr><td>N</td><td>Total forecast
-days</td><td>${statistics.validDays}</td></tr>
-                <tr><td>Correct (%)</td><td>(Correct Sum /
-(YY+NN))&times;100</td><td>${((statistics.correctSum / (statistics.YY
-+ statistics.NN)) * 100).toFixed(2)}%</td></tr>
-                <tr><td>Usable (%)</td><td>(Usable Sum /
-(YY+NN))&times;100</td><td>${((statistics.usableSum / (statistics.YY +
-statistics.NN)) * 100).toFixed(2)}%</td></tr>
-                <tr><td>Unusable (%)</td><td>(Unusable Sum /
-(YY+NN))&times;100</td><td>${((statistics.unusableSum / (statistics.YY
-+ statistics.NN)) * 100).toFixed(2)}%</td></tr>
-                <tr><td>RS
-(%)</td><td>((YY+NN)/N)&times;100</td><td>${statistics.rs.toFixed(2)}%</td></tr>
-                <tr><td>H.K.
-Score</td><td>((YY&times;NN)-(YN&times;NY))/((YY+NY)&times;(YN+NN))</td><td>${statistics.hk.toFixed(3)}</td></tr>
-
-<tr><td>POD</td><td>YY/(YY+NY)</td><td>${statistics.pod.toFixed(3)}</td></tr>
-
-<tr><td>FAR</td><td>YN/(YN+YY)</td><td>${statistics.far.toFixed(3)}</td></tr>
-
-<tr><td>CSI</td><td>YY/(YY+YN+NY)</td><td>${statistics.csi.toFixed(3)}</td></tr>
-
-<tr><td>HSS</td><td>2&times;((YY&times;NN)-(YN&times;NY))/[((YY+NY)&times;(NY+NN))+((YY+YN)&times;(YN+NN))]</td><td>${statistics.hss.toFixed(3)}</td></tr>
-
-<tr><td>MR</td><td>YN/(YN+NY)</td><td>${statistics.mr.toFixed(3)}</td></tr>
-                <tr><td>C
-NON</td><td>NN/(NN+YY)</td><td>${statistics.cnon.toFixed(3)}</td></tr>
-
-<tr><td>BAIS</td><td>(YY+YN)/(NN+YY)</td><td>${statistics.bias.toFixed(3)}</td></tr>
-                <tr><td>PC
-(%)</td><td>((NN+YY)/(NN+YY+YN+NY))&times;100</td><td>${statistics.pc.toFixed(2)}%</td></tr>
+                <tr><td>YY</td><td>Rain forecast & observed (&ne;0)</td><td>${statistics.YY}</td></tr>
+                <tr><td>YN</td><td>Rain forecast, not observed (forecast &ne;0, obs=0)</td><td>${statistics.YN}</td></tr>
+                <tr><td>NY</td><td>No rain forecast, rain observed (forecast=0, obs &ne;0)</td><td>${statistics.NY}</td></tr>
+                <tr><td>NN</td><td>No rain forecast & not observed (both=0)</td><td>${statistics.NN}</td></tr>
+                <tr><td>N</td><td>Total forecast days</td><td>${statistics.validDays}</td></tr>
+                <tr><td>Correct (%)</td><td>(Correct Sum / (YY+NN))&times;100</td><td>${((statistics.correctSum / (statistics.YY + statistics.NN)) * 100).toFixed(2)}%</td></tr>
+                <tr><td>Usable (%)</td><td>(Usable Sum / (YY+NN))&times;100</td><td>${((statistics.usableSum / (statistics.YY + statistics.NN)) * 100).toFixed(2)}%</td></tr>
+                <tr><td>Unusable (%)</td><td>(Unusable Sum / (YY+NN))&times;100</td><td>${((statistics.unusableSum / (statistics.YY + statistics.NN)) * 100).toFixed(2)}%</td></tr>
+                <tr><td>RS (%)</td><td>((YY+NN)/N)&times;100</td><td>${statistics.rs.toFixed(2)}%</td></tr>
+                <tr><td>H.K.Score</td><td>((YY&times;NN)-(YN&times;NY))/((YY+NY)&times;(YN+NN))</td><td>${statistics.hk.toFixed(3)}</td></tr>
+                <tr><td>POD</td><td>YY/(YY+NY)</td><td>${statistics.pod.toFixed(3)}</td></tr>
+                <tr><td>FAR</td><td>YN/(YN+YY)</td><td>${statistics.far.toFixed(3)}</td></tr>
+                <tr><td>CSI</td><td>YY/(YY+YN+NY)</td><td>${statistics.csi.toFixed(3)}</td></tr>
+                <tr><td>HSS</td><td>2&times;((YY&times;NN)-(YN&times;NY))/[((YY+NY)&times;(NY+NN))+((YY+YN)&times;(YN+NN))]</td><td>${statistics.hss.toFixed(3)}</td></tr>
+                <tr><td>MR</td><td>YN/(YN+NY)</td><td>${statistics.mr.toFixed(3)}</td></tr>
+                <tr><td>C NON</td><td>NN/(NN+YY)</td><td>${statistics.cnon.toFixed(3)}</td></tr>
+                <tr><td>BAIS</td><td>(YY+YN)/(NN+YY)</td><td>${statistics.bias.toFixed(3)}</td></tr>
+                <tr><td>PC (%)</td><td>((NN+YY)/(NN+YY+YN+NY))&times;100</td><td>${statistics.pc.toFixed(2)}%</td></tr>
               </tbody>
             </table>
           </div>
@@ -3462,74 +3471,55 @@ NON</td><td>NN/(NN+YY)</td><td>${statistics.cnon.toFixed(3)}</td></tr>
             <tbody>
               <tr>
                 <td><strong>Missing days (M)</strong></td>
-                <td style="text-align:
-right;"><strong>${statistics.missingDays}</strong></td>
+                <td style="text-align: right;"><strong>${statistics.missingDays}</strong></td>
               </tr>
               <tr>
                 <td><strong>Total no. of forecast days (N)</strong></td>
-                <td style="text-align:
-right;"><strong>${statistics.validDays}</strong></td>
+                <td style="text-align: right;"><strong>${statistics.validDays}</strong></td>
               </tr>
               <tr>
                 <td><strong>Rain forecasted and observed (YY)</strong></td>
-                <td style="text-align:
-right;"><strong>${statistics.YY}</strong></td>
+                <td style="text-align: right;"><strong>${statistics.YY}</strong></td>
               </tr>
               <tr>
                 <td><strong>Rain forecasted but not observed (YN)</strong></td>
-                <td style="text-align:
-right;"><strong>${statistics.YN}</strong></td>
+                <td style="text-align: right;"><strong>${statistics.YN}</strong></td>
               </tr>
               <tr>
                 <td><strong>Rain observed but not forecasted (NY)</strong></td>
-                <td style="text-align:
-right;"><strong>${statistics.NY}</strong></td>
+                <td style="text-align: right;"><strong>${statistics.NY}</strong></td>
               </tr>
               <tr>
                 <td><strong>No rain forecasted and observed (NN)</strong></td>
-                <td style="text-align:
-right;"><strong>${statistics.NN}</strong></td>
+                <td style="text-align: right;"><strong>${statistics.NN}</strong></td>
               </tr>
               <tr>
                 <td><strong>Matching cases (YY + NN)</strong></td>
-                <td style="text-align: right;"><strong>${statistics.YY
-+ statistics.NN}</strong></td>
+                <td style="text-align: right;"><strong>${statistics.YY + statistics.NN}</strong></td>
               </tr>
               <tr style="border-top: 2px solid #dee2e6;">
                 <td><strong>Sum from Correct column</strong></td>
-                <td style="text-align:
-right;"><strong>${statistics.correctSum}</strong></td>
+                <td style="text-align: right;"><strong>${statistics.correctSum}</strong></td>
               </tr>
               <tr>
                 <td><strong>Sum from Usable column</strong></td>
-                <td style="text-align:
-right;"><strong>${statistics.usableSum}</strong></td>
+                <td style="text-align: right;"><strong>${statistics.usableSum}</strong></td>
               </tr>
               <tr>
                 <td><strong>Sum from Unusable column</strong></td>
-                <td style="text-align:
-right;"><strong>${statistics.unusableSum}</strong></td>
+                <td style="text-align: right;"><strong>${statistics.unusableSum}</strong></td>
               </tr>
               <tr style="border-top: 2px solid #dee2e6;">
-                <td><strong>Correct % = (Correct Sum / (YY + NN)) ×
-100</strong></td>
-                <td style="text-align:
-right;"><strong>${((statistics.correctSum / (statistics.YY +
-statistics.NN)) * 100).toFixed(2)}%</strong></td>
+                <td><strong>Correct % = (Correct Sum / (YY + NN)) × 100</strong></td>
+                <td style="text-align: right;"><strong>${((statistics.correctSum / (statistics.YY + statistics.NN)) * 100).toFixed(2)}%</strong></td>
               </tr>
               <tr>
-                <td><strong>Usable % = (Usable Sum / (YY + NN)) ×
-100</strong></td>
-                <td style="text-align:
-right;"><strong>${((statistics.usableSum / (statistics.YY +
-statistics.NN)) * 100).toFixed(2)}%</strong></td>
+                <td><strong>Usable % = (Usable Sum / (YY + NN)) × 100</strong></td>
+                <td style="text-align: right;"><strong>${((statistics.usableSum / (statistics.YY + statistics.NN)) * 100).toFixed(2)}%</strong></td>
               </tr>
               <tr>
-                <td><strong>Unusable % = (Unusable Sum / (YY + NN)) ×
-100</strong></td>
-                <td style="text-align:
-right;"><strong>${((statistics.unusableSum / (statistics.YY +
-statistics.NN)) * 100).toFixed(2)}%</strong></td>
+                <td><strong>Unusable % = (Unusable Sum / (YY + NN)) × 100</strong></td>
+                <td style="text-align: right;"><strong>${((statistics.unusableSum / (statistics.YY + statistics.NN)) * 100).toFixed(2)}%</strong></td>
               </tr>
             </tbody>
           </table>
@@ -3571,9 +3561,7 @@ statistics.NN)) * 100).toFixed(2)}%</strong></td>
           <td>${formatComparisonValue(item.forecastValue)}</td>
           <td>${formatComparisonValue(item.observationValue)}</td>
           <td>${formatComparisonValue(item.absoluteDifference)}</td>
-          <td><span style="${categoryStyle} padding: 4px 8px;
-border-radius: 15px; font-size: 12px; font-weight:
-bold;">${category}</span></td>
+          <td><span style="${categoryStyle} padding: 4px 8px; border-radius: 15px; font-size: 12px; font-weight: bold;">${category}</span></td>
         </tr>`;
       });
 
@@ -3585,44 +3573,32 @@ bold;">${category}</span></td>
         `<strong>Unusable = (N3/N) × 100</strong>`;
 
       tableHtml += `
-        <div style="margin-top: 30px; padding: 20px; background:
-#f8f9fa; border-radius: 10px;">
-          <h4>Statistical Summary for ${parameterNames[parameter] ||
-parameter}</h4>
+        <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+          <h4>Statistical Summary for ${parameterNames[parameter] || parameter}</h4>
           <table style="width: 100%; max-width: 600px;">
             <tbody>
               <tr>
                 <td><strong>Missing days (M)</strong></td>
-                <td style="text-align:
-right;"><strong>${statistics.missingDays}</strong></td>
+                <td style="text-align: right;"><strong>${statistics.missingDays}</strong></td>
               </tr>
               <tr>
                 <td><strong>Total no. of forecast days (N)</strong></td>
-                <td style="text-align:
-right;"><strong>${statistics.validDays}</strong></td>
+                <td style="text-align: right;"><strong>${statistics.validDays}</strong></td>
               </tr>
               <tr>
-                <td><strong>No. of absolute values ≤
-${statistics.threshold1} (N1)</strong></td>
-                <td style="text-align:
-right;"><strong>${statistics.n1}</strong></td>
+                <td><strong>No. of absolute values ≤ ${statistics.threshold1} (N1)</strong></td>
+                <td style="text-align: right;"><strong>${statistics.n1}</strong></td>
               </tr>
               <tr>
-                <td><strong>No. of absolute values >
-${statistics.threshold1} (N11)</strong></td>
-                <td style="text-align:
-right;"><strong>${statistics.n11}</strong></td>
+                <td><strong>No. of absolute values > ${statistics.threshold1} (N11)</strong></td>
+                <td style="text-align: right;"><strong>${statistics.n11}</strong></td>
               </tr>
               <tr>
-                <td><strong>No. of absolute values >
-${statistics.threshold2} (N3)</strong></td>
-                <td style="text-align:
-right;"><strong>${statistics.n3}</strong></td>
+                <td><strong>No. of absolute values > ${statistics.threshold2} (N3)</strong></td>
+                <td style="text-align: right;"><strong>${statistics.n3}</strong></td>
               </tr>
               <tr>
-                <td><strong>No. of absolute values
-${statistics.threshold1} < diff ≤ ${statistics.threshold2}
-(N2)</strong></td>
+                <td><strong>No. of absolute values ${statistics.threshold1} < diff ≤ ${statistics.threshold2} (N2)</strong></td>
                 <td style="text-align:
 right;"><strong>${statistics.n2}</strong></td>
               </tr>
@@ -5603,7 +5579,8 @@ Poor: 0 }; });
     chartsContainer.innerHTML = '';
 
     // Define day colors (avoiding green, red, yellow)
-    const dayColors = ['#3498db', '#9b59b6', '#e67e22', '#1abc9c', '#34495e'];
+    //const dayColors = ['#3498db', '#9b59b6', '#e67e22', '#1abc9c', '#34495e'];
+    const dayColors = ['#e74c3c', '#3498db', '#27ae60', '#b7950b', '#fff9b0'];
 
     paramNames.forEach((p, idx) => {
       ['Good','Moderate','Poor'].forEach(cat => {
