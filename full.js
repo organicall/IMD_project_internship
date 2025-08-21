@@ -2933,7 +2933,7 @@ function calculateRainfallStatistics(comparisonData) {
     } else if (status === 'YN' || status === 'NY') {
       correctSum += 0;
     } else if (status === 'YY') {
-      if (absDiff < 2.5) {
+      if (absDiff <= 2.5) {
         correctSum += 1;
       } else {
         correctSum += 0;
@@ -2946,7 +2946,7 @@ function calculateRainfallStatistics(comparisonData) {
     } else if (status === 'YN' || status === 'NY') {
       usableSum += 0;
     } else if (status === 'YY') {
-      if (absDiff >= 2.5 && absDiff < 5) {
+      if (absDiff > 2.5 && absDiff <= 5) {
         usableSum += 1;
       } else {
         usableSum += 0;
@@ -2959,7 +2959,7 @@ function calculateRainfallStatistics(comparisonData) {
     } else if (status === 'YN' || status === 'NY') {
       unusableSum += 0;
     } else if (status === 'YY') {
-      if (absDiff >= 5) {
+      if (absDiff > 5) {
         unusableSum += 1;
       } else {
         unusableSum += 0;
