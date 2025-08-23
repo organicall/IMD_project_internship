@@ -56,7 +56,7 @@ const CORRECT_DISTRICTS = [
 ];
 
 const DISTRICT_ALIASES = {
-  // Common variations → canonical name
+  // Common variations -> canonical name
   'ANANTAPUR': 'ANANTPUR',
   'YSR KADAPA': 'KADAPA',
   'YSR': 'KADAPA',
